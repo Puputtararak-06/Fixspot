@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, Image, StatusBar, Alert
+  TouchableOpacity, ActivityIndicator, Image, StatusBar, Alert, TextInput
 } from 'react-native'
-import { doc, getDoc, deleteDoc } from 'firebase/firestore'
+import { doc, getDoc, deleteDoc, collection, addDoc, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import { useApp } from '../../context/AppContext'
+import * as ImagePicker from 'expo-image-picker'
+import { uploadImage } from '../../services/cloudinaryService'
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending', color: '#E07A2F', bg: '#FFF4EB' },
@@ -19,10 +21,29 @@ export default function ReportDetailScreen({ navigation, route }) {
   const { currentUser } = useApp()
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
+  const [comments, setComments] = useState([])
+  const [commentText, setCommentText] = useState('')
+  const [commentImage, setCommentImage] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     fetchReport()
   }, [])
+
+  useEffect(() => {
+    // Real-time listener for comments
+    const q = query(
+      collection(db, 'reports', reportId, 'comments'),
+      orderBy('createdAt', 'asc')
+    )
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      setComments(data)
+    }, (error) => console.log('Comments listener error:', error))
+
+    return () => unsubscribe()
+  }, [reportId])
 
   const fetchReport = async () => {
     try {
@@ -44,11 +65,75 @@ export default function ReportDetailScreen({ navigation, route }) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteDoc(doc(db, 'reports', reportId))
-          navigation.goBack()
+          setDeleting(true)
+          try {
+            // Delete all notifications for this report
+            const q = query(
+              collection(db, 'notifications'),
+              where('reportId', '==', reportId)
+            )
+            const snapshot = await getDocs(q)
+            for (const docSnap of snapshot.docs) {
+              await deleteDoc(docSnap.ref)
+            }
+
+            // Delete the report
+            await deleteDoc(doc(db, 'reports', reportId))
+            navigation.goBack()
+          } catch (e) {
+            Alert.alert('Error', 'Failed to delete report')
+            console.log(e)
+            setDeleting(false)
+          }
         }
       }
     ])
+  }
+
+  const pickCommentImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    })
+    if (!result.canceled) {
+      setCommentImage(result.assets[0].uri)
+    }
+  }
+
+  const handleAddComment = async () => {
+    if (!commentText.trim()) {
+      Alert.alert('Error', 'Please enter a comment')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      let imageUrl = null
+      if (commentImage) {
+        imageUrl = await uploadImage(commentImage)
+      }
+
+      await addDoc(collection(db, 'reports', reportId, 'comments'), {
+        text: commentText.trim(),
+        imageUrl,
+        userId: currentUser.uid,
+        userName: currentUser.name,
+        userRole: currentUser.role || 'user',
+        createdAt: new Date().toISOString(),
+      })
+
+      // Reset form
+      setCommentText('')
+      setCommentImage(null)
+      Alert.alert('Success', 'Comment added!')
+    } catch (e) {
+      Alert.alert('Error', 'Failed to add comment')
+      console.log(e)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (loading) {
@@ -146,6 +231,74 @@ export default function ReportDetailScreen({ navigation, route }) {
           </View>
         ) : null}
 
+        {/* Comments Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>💬 Comments ({comments.length})</Text>
+          {comments.length === 0 ? (
+            <Text style={styles.emptyText}>No comments yet</Text>
+          ) : (
+            <View style={styles.commentsList}>
+              {comments.map((comment) => (
+                <View key={comment.id} style={styles.commentItem}>
+                  <View style={styles.commentHeader}>
+                    <Text style={styles.commentAuthor}>{comment.userName}</Text>
+                    <Text style={styles.commentRole}>{comment.userRole === 'admin' ? '🛡️ Admin' : '👤 User'}</Text>
+                  </View>
+                  <Text style={styles.commentText}>{comment.text}</Text>
+                  {comment.imageUrl && (
+                    <Image source={{ uri: comment.imageUrl }} style={styles.commentImage} />
+                  )}
+                  <Text style={styles.commentDate}>
+                    {new Date(comment.createdAt).toLocaleDateString('en-GB')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Comment Input Form */}
+        <View style={styles.commentFormBox}>
+          <Text style={styles.sectionLabel}>Add a Comment</Text>
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Write your comment..."
+            placeholderTextColor="#A0ADA0"
+            value={commentText}
+            onChangeText={setCommentText}
+            multiline
+            numberOfLines={3}
+            maxLength={300}
+          />
+          <Text style={styles.charCount}>{commentText.length}/300</Text>
+
+          {commentImage && (
+            <View style={styles.imagePreview}>
+              <Image source={{ uri: commentImage }} style={styles.previewImage} />
+              <TouchableOpacity style={styles.removeImage} onPress={() => setCommentImage(null)}>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.imageButton} onPress={pickCommentImage} disabled={submitting}>
+              <Text style={styles.imageButtonText}>📷 Add Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.submitCommentButton, submitting && { opacity: 0.7 }]}
+              onPress={handleAddComment}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitCommentText}>Send 📤</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Timeline */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Status Timeline</Text>
@@ -172,8 +325,16 @@ export default function ReportDetailScreen({ navigation, route }) {
 
         {/* Delete Button — pending only */}
         {canDelete && (
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteText}>🗑️ Delete Report</Text>
+          <TouchableOpacity
+            style={[styles.deleteButton, deleting && { opacity: 0.7 }]}
+            onPress={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator color="#E05252" />
+            ) : (
+              <Text style={styles.deleteText}>🗑️ Delete Report</Text>
+            )}
           </TouchableOpacity>
         )}
 
@@ -258,4 +419,44 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#FDEAEA',
   },
   deleteText: { color: '#E05252', fontSize: 15, fontWeight: '600' },
+  emptyText: { fontSize: 14, color: '#A0ADA0', fontStyle: 'italic' },
+  commentsList: { gap: 12, marginTop: 8 },
+  commentItem: {
+    backgroundColor: '#F5F7F5', borderRadius: 12, padding: 12,
+    borderLeftWidth: 3, borderLeftColor: '#2D7A5F',
+  },
+  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  commentAuthor: { fontSize: 13, fontWeight: '600', color: '#1A2E1A' },
+  commentRole: { fontSize: 11, color: '#6B7C6B' },
+  commentText: { fontSize: 14, color: '#1A2E1A', lineHeight: 20, marginBottom: 6 },
+  commentImage: { width: '100%', height: 150, borderRadius: 10, marginBottom: 8 },
+  commentDate: { fontSize: 11, color: '#A0ADA0' },
+  commentFormBox: {
+    backgroundColor: '#fff', borderRadius: 14, padding: 16,
+    marginTop: 12, marginBottom: 12,
+    borderWidth: 1, borderColor: '#E8EEE8',
+  },
+  commentInput: {
+    backgroundColor: '#F5F7F5', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    fontSize: 14, color: '#1A2E1A', height: 100, textAlignVertical: 'top',
+    marginBottom: 4, borderWidth: 1, borderColor: '#E8EEE8',
+  },
+  charCount: { fontSize: 11, color: '#A0ADA0', textAlign: 'right', marginBottom: 12 },
+  imagePreview: { marginBottom: 12, borderRadius: 10, overflow: 'hidden', position: 'relative' },
+  previewImage: { width: '100%', height: 120, borderRadius: 10 },
+  removeImage: {
+    position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center',
+  },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  imageButton: {
+    flex: 1, backgroundColor: '#ebfdf6', borderRadius: 10, paddingVertical: 12,
+    alignItems: 'center', borderWidth: 1, borderColor: '#2D7A5F',
+  },
+  imageButtonText: { color: '#2D7A5F', fontSize: 13, fontWeight: '600' },
+  submitCommentButton: {
+    flex: 1, backgroundColor: '#2D7A5F', borderRadius: 10, paddingVertical: 12,
+    alignItems: 'center',
+  },
+  submitCommentText: { color: '#fff', fontSize: 13, fontWeight: '600' },
 })

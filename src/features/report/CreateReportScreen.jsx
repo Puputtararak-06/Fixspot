@@ -6,7 +6,7 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as Location from 'expo-location'
-import { collection, addDoc } from 'firebase/firestore'
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import { useApp } from '../../context/AppContext'
 import { uploadImage } from '../../services/cloudinaryService'
@@ -59,8 +59,20 @@ export default function CreateReportScreen({ navigation, route }) {
   }
 
   const handleSubmit = async () => {
-    if (!description || !category) {
-      Alert.alert('Missing Information', 'Description and category are required')
+    if (!image) {
+      Alert.alert('Missing Photo', 'Please take or upload a photo')
+      return
+    }
+    if (!category) {
+      Alert.alert('Missing Category', 'Please select a category')
+      return
+    }
+    if (!description) {
+      Alert.alert('Missing Description', 'Please enter a description')
+      return
+    }
+    if (!location) {
+      Alert.alert('Missing Location', 'Please tap to detect your location')
       return
     }
     setLoading(true)
@@ -68,7 +80,7 @@ export default function CreateReportScreen({ navigation, route }) {
       let imageUrl = null
       if (image) imageUrl = await uploadImage(image)
 
-      await addDoc(collection(db, 'reports'), {
+      const reportRef = await addDoc(collection(db, 'reports'), {
         title: category,
         description,
         category,
@@ -83,20 +95,37 @@ export default function CreateReportScreen({ navigation, route }) {
         updatedAt: new Date().toISOString(),
       })
 
+      // Create notification for all admins
+      const adminsSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'admin')))
+      for (const adminDoc of adminsSnap.docs) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: adminDoc.id,
+          reportId: reportRef.id,
+          category: category,
+          categoryIcon: categoryIcon || '📋',
+          newStatus: 'pending',
+          message: `📬 New Report: ${category} from ${currentUser.name}`,
+          read: false,
+          createdAt: new Date().toISOString(),
+        })
+      }
+
       Alert.alert('Report Submitted ✅', 'Your report has been submitted successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ])
     } catch (e) {
       Alert.alert('Error', 'Please try again')
       console.log(e)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
+    <View style={{ flex: 1 }}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} scrollEnabled={true}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
@@ -106,7 +135,7 @@ export default function CreateReportScreen({ navigation, route }) {
 
       <View style={styles.content}>
         {/* Photo */}
-        <Text style={styles.label}>Photo of Issue</Text>
+        <Text style={styles.label}>Photo of Issue <Text style={styles.required}>*</Text></Text>
         <View style={styles.photoRow}>
           <TouchableOpacity style={styles.photoButton} onPress={() => pickImage(true)}>
             <Text style={styles.photoIcon}>📷</Text>
@@ -158,7 +187,7 @@ export default function CreateReportScreen({ navigation, route }) {
         <Text style={styles.charCount}>{description.length}/200</Text>
 
         {/* Location */}
-        <Text style={styles.label}>Location</Text>
+        <Text style={styles.label}>Location <Text style={styles.required}>*</Text></Text>
         <TouchableOpacity style={styles.locationButton} onPress={getLocation}>
           {locating ? (
             <ActivityIndicator color="#2D7A5F" />
@@ -186,12 +215,13 @@ export default function CreateReportScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
       <View style={{ height: 40 }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7F5' },
+  container: { backgroundColor: '#F5F7F5' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#ebfdf6', paddingTop: 60, paddingBottom: 16, paddingHorizontal: 16,

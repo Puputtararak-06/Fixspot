@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   ActivityIndicator, StatusBar, TouchableOpacity, Modal, Alert
@@ -20,6 +20,8 @@ export default function AdminDashboardScreen({ navigation }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [allReports, setAllReports] = useState([])
   const [filterStatus, setFilterStatus] = useState('pending')
+  const [markingRead, setMarkingRead] = useState(false)
+  const shownNotificationIds = useRef(new Set())
 
   // Set up real-time listener for reports
   useEffect(() => {
@@ -61,11 +63,15 @@ export default function AdminDashboardScreen({ navigation }) {
       setNotifications(data)
       setUnreadCount(data.filter(n => !n.read).length)
 
-      // Check for new unread notifications and show alert
+      // Check for new unread notifications that haven't been shown yet
       const unreadNotifications = data.filter(n => !n.read)
       if (unreadNotifications.length > 0) {
         const latestNoti = unreadNotifications[0]
-        Alert.alert('📬 New Notification', latestNoti.message)
+        // Only show alert if this notification hasn't been shown before
+        if (!shownNotificationIds.current.has(latestNoti.id)) {
+          Alert.alert('📬 New Notification', latestNoti.message)
+          shownNotificationIds.current.add(latestNoti.id)
+        }
       }
     }, (error) => console.log('Notification listener error:', error))
 
@@ -91,17 +97,25 @@ export default function AdminDashboardScreen({ navigation }) {
       })
     } catch (e) {
       console.log(e)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const markAllRead = async () => {
-    const unread = notifications.filter(n => !n.read)
-    for (const n of unread) {
-      await updateDoc(doc(db, 'notifications', n.id), { read: true })
+    setMarkingRead(true)
+    try {
+      const unread = notifications.filter(n => !n.read)
+      for (const n of unread) {
+        await updateDoc(doc(db, 'notifications', n.id), { read: true })
+      }
+      setUnreadCount(0)
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    } catch (e) {
+      console.log(e)
+    } finally {
+      setMarkingRead(false)
     }
-    setUnreadCount(0)
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
   const cards = [
@@ -126,6 +140,7 @@ export default function AdminDashboardScreen({ navigation }) {
         <TouchableOpacity
           style={styles.notiButton}
           onPress={() => { setShowNoti(true); markAllRead() }}
+          disabled={markingRead}
         >
           <Text style={styles.notiIcon}>🔔</Text>
           {unreadCount > 0 && (
@@ -250,7 +265,12 @@ export default function AdminDashboardScreen({ navigation }) {
                 <TouchableOpacity
                   key={n.id}
                   style={[styles.notiItem, !n.read && styles.notiItemUnread]}
-                  onPress={() => setShowNoti(false)}
+                  onPress={() => {
+                    setShowNoti(false)
+                    if (n.reportId) {
+                      navigation.navigate('ReportModeration', { reportId: n.reportId })
+                    }
+                  }}
                 >
                   <Text style={styles.notiItemIcon}>{n.categoryIcon || '📋'}</Text>
                   <View style={styles.notiItemContent}>

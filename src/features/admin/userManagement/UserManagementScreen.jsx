@@ -11,6 +11,8 @@ export default function UserManagementScreen() {
   const { currentUser } = useApp()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [togglingRole, setTogglingRole] = useState(false)
+  const [togglingUserId, setTogglingUserId] = useState(null)
 
   useEffect(() => {
     fetchUsers()
@@ -23,8 +25,9 @@ export default function UserManagementScreen() {
       setUsers(data)
     } catch (e) {
       console.log(e)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const handleToggleRole = (user) => {
@@ -41,10 +44,19 @@ export default function UserManagementScreen() {
         {
           text: 'Confirm',
           onPress: async () => {
-            await updateDoc(doc(db, 'users', user.uid), { role: newRole })
-            setUsers(prev => prev.map(u =>
-              u.uid === user.uid ? { ...u, role: newRole } : u
-            ))
+            setTogglingRole(true)
+            setTogglingUserId(user.uid)
+            try {
+              await updateDoc(doc(db, 'users', user.uid), { role: newRole })
+              setUsers(prev => prev.map(u =>
+                u.uid === user.uid ? { ...u, role: newRole } : u
+              ))
+            } catch (e) {
+              Alert.alert('Error', 'Failed to change role')
+              console.log(e)
+              setTogglingRole(false)
+              setTogglingUserId(null)
+            }
           }
         }
       ]
@@ -68,10 +80,15 @@ export default function UserManagementScreen() {
       <TouchableOpacity
         style={[styles.roleBadge, item.role === 'admin' && styles.roleBadgeAdmin]}
         onPress={() => handleToggleRole(item)}
+        disabled={togglingRole && togglingUserId === item.uid}
       >
-        <Text style={[styles.roleText, item.role === 'admin' && styles.roleTextAdmin]}>
-          {item.role === 'admin' ? '🛡️ Admin' : '👤 User'}
-        </Text>
+        {togglingRole && togglingUserId === item.uid ? (
+          <ActivityIndicator color={item.role === 'admin' ? '#8B5CF6' : '#2D7A5F'} size="small" />
+        ) : (
+          <Text style={[styles.roleText, item.role === 'admin' && styles.roleTextAdmin]}>
+            {item.role === 'admin' ? '🛡️ Admin' : '👤 User'}
+          </Text>
+        )}
       </TouchableOpacity>
     </View>
   )

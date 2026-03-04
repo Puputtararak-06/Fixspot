@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, Alert, Image, StatusBar, Modal
 } from 'react-native'
-import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../../services/firebase'
 import { useApp } from '../../../context/AppContext'
 import * as ImagePicker from 'expo-image-picker'
@@ -33,8 +33,9 @@ export default function ReportModerationScreen({ navigation, route }) {
       }
     } catch (e) {
       console.log(e)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const pickImage = async () => {
@@ -93,6 +94,22 @@ export default function ReportModerationScreen({ navigation, route }) {
     }
   }
 
+  const markNotificationAsRead = async () => {
+    try {
+      // Mark all notifications for this report as read
+      const q = query(
+        collection(db, 'notifications'),
+        where('reportId', '==', reportId)
+      )
+      const snapshot = await getDocs(q)
+      for (const docSnap of snapshot.docs) {
+        await updateDoc(docSnap.ref, { read: true })
+      }
+    } catch (e) {
+      console.log('Error marking notification as read:', e)
+    }
+  }
+
   const handleStartTask = () => {
     Alert.alert(
       '🚀 Start Task',
@@ -116,6 +133,8 @@ export default function ReportModerationScreen({ navigation, route }) {
                 'in_progress',
                 `Your report "${report.category}" has been started. We're working on it!`
               )
+
+              await markNotificationAsRead()
 
               Alert.alert('Success ✅', 'Task started!', [
                 { text: 'OK', onPress: () => navigation.goBack() }
@@ -154,6 +173,8 @@ export default function ReportModerationScreen({ navigation, route }) {
                 'rejected',
                 `Your report "${report.category}" has been rejected. Admin note: ${adminNote || 'No note provided'}`
               )
+
+              await markNotificationAsRead()
 
               Alert.alert('Success ✅', 'Report rejected!', [
                 { text: 'OK', onPress: () => navigation.goBack() }
@@ -203,6 +224,8 @@ export default function ReportModerationScreen({ navigation, route }) {
                 `Your report "${report.category}" has been resolved! Check the completion photo.`
               )
 
+              await markNotificationAsRead()
+
               Alert.alert('Success ✅', 'Task marked as done!', [
                 { text: 'OK', onPress: () => navigation.goBack() }
               ])
@@ -229,11 +252,12 @@ export default function ReportModerationScreen({ navigation, route }) {
   const isInProgress = report?.status === 'in_progress'
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <StatusBar barStyle="dark-content" />
+    <View style={{ flex: 1 }}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} scrollEnabled={true}>
+        <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
-      <View style={styles.header}>
+        {/* Header */}
+        <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
@@ -376,12 +400,13 @@ export default function ReportModerationScreen({ navigation, route }) {
 
       </View>
       <View style={{ height: 40 }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7F5' },
+  container: { backgroundColor: '#F5F7F5' },
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center',

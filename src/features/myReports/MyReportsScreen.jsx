@@ -30,6 +30,8 @@ export default function MyReportsScreen({ navigation }) {
   const [filtered, setFiltered] = useState([])
   const [activeFilter, setActiveFilter] = useState('All')
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
 
   useFocusEffect(
     useCallback(() => {
@@ -58,8 +60,9 @@ export default function MyReportsScreen({ navigation }) {
       setFiltered(data)
     } catch (e) {
       console.log(e)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const handleDelete = (reportId) => {
@@ -69,8 +72,17 @@ export default function MyReportsScreen({ navigation }) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteDoc(doc(db, 'reports', reportId))
-          setReports(prev => prev.filter(r => r.id !== reportId))
+          setDeleting(true)
+          setDeletingId(reportId)
+          try {
+            await deleteDoc(doc(db, 'reports', reportId))
+            setReports(prev => prev.filter(r => r.id !== reportId))
+          } catch (e) {
+            Alert.alert('Error', 'Failed to delete report')
+            console.log(e)
+            setDeleting(false)
+            setDeletingId(null)
+          }
         }
       }
     ])
@@ -112,8 +124,13 @@ export default function MyReportsScreen({ navigation }) {
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => handleDelete(item.id)}
+              disabled={deleting && deletingId === item.id}
             >
-              <Text style={styles.deleteText}>🗑️ Delete</Text>
+              {deleting && deletingId === item.id ? (
+                <ActivityIndicator color="#E05252" size="small" />
+              ) : (
+                <Text style={styles.deleteText}>🗑️ Delete</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}

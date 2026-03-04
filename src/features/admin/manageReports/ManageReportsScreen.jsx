@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList,
   TouchableOpacity, ActivityIndicator, StatusBar, TextInput
 } from 'react-native'
-import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { collection, orderBy, query, onSnapshot } from 'firebase/firestore'
 import { db } from '../../../services/firebase'
 
 const STATUS_CONFIG = {
@@ -23,7 +23,7 @@ export default function ManageReportsScreen({ navigation }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchReports()
+    return fetchReports()
   }, [])
 
   useEffect(() => {
@@ -42,16 +42,17 @@ export default function ManageReportsScreen({ navigation }) {
   }, [activeFilter, search, reports])
 
   const fetchReports = async () => {
-    try {
-      const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'))
-      const snapshot = await getDocs(q)
+    const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'))
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       setReports(data)
       setFiltered(data)
-    } catch (e) {
-      console.log(e)
-    }
-    setLoading(false)
+      setLoading(false)
+    }, (error) => {
+      console.log(error)
+      setLoading(false)
+    })
+    return () => unsubscribe()
   }
 
   const renderItem = ({ item }) => {

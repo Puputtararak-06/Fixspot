@@ -27,7 +27,10 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{ headerShown: false }}
+        initialRouteName={currentUser ? (userRole === 'admin' ? 'AdminTabs' : 'UserTabs') : 'Login'}
+      >
         {currentUser ? (
           userRole === 'admin' ? (
             <>

@@ -1,4 +1,4 @@
-import React, {useState ,useCallback, useEffect } from 'react'
+import React, {useState ,useCallback, useEffect, useRef } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator, StatusBar, Modal, Alert
@@ -23,6 +23,8 @@ export default function HomeScreen({ navigation }) {
   const [notifications, setNotifications] = useState([])
   const [showNoti, setShowNoti] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [markingRead, setMarkingRead] = useState(false)
+  const shownNotificationIds = useRef(new Set())
 
   // Set up real-time listener for notifications
   useEffect(() => {
@@ -39,11 +41,15 @@ export default function HomeScreen({ navigation }) {
       setNotifications(data)
       setUnreadCount(data.filter(n => !n.read).length)
 
-      // Check for new unread notifications and show alert
+      // Check for new unread notifications and show alert only once
       const unreadNotifications = data.filter(n => !n.read)
       if (unreadNotifications.length > 0) {
         const latestNoti = unreadNotifications[0]
-        Alert.alert('📬 New Notification', latestNoti.message)
+        // Only show alert if this notification hasn't been shown before
+        if (!shownNotificationIds.current.has(latestNoti.id)) {
+          Alert.alert('📬 New Notification', latestNoti.message)
+          shownNotificationIds.current.add(latestNoti.id)
+        }
       }
     }, (error) => console.log('Notification listener error:', error))
 
@@ -73,17 +79,25 @@ export default function HomeScreen({ navigation }) {
       setRecentReports(reports.slice(0, 3))
     } catch (e) {
       console.log(e)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const markAllRead = async () => {
-    const unread = notifications.filter(n => !n.read)
-    for (const n of unread) {
-      await updateDoc(doc(db, 'notifications', n.id), { read: true })
+    setMarkingRead(true)
+    try {
+      const unread = notifications.filter(n => !n.read)
+      for (const n of unread) {
+        await updateDoc(doc(db, 'notifications', n.id), { read: true })
+      }
+      setUnreadCount(0)
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    } catch (e) {
+      console.log(e)
+    } finally {
+      setMarkingRead(false)
     }
-    setUnreadCount(0)
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
   return (
@@ -99,6 +113,7 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity
           style={styles.notiButton}
           onPress={() => { setShowNoti(true); markAllRead() }}
+          disabled={markingRead}
         >
           <Text style={styles.notiIcon}>🔔</Text>
           {unreadCount > 0 && (

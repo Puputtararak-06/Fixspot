@@ -8,11 +8,12 @@ import { db } from '../../../services/firebase'
 import { useApp } from '../../../context/AppContext'
 import { logoutUser } from '../../../services/authService'
 
-export default function AdminProfileScreen() {
+export default function AdminProfileScreen({ navigation }) {
   const { currentUser, updateCurrentUser } = useApp()
   const [editing, setEditing] = useState(false)
   const [newName, setNewName] = useState(currentUser?.name || '')
   const [loading, setLoading] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
 
   const handleUpdateName = async () => {
     if (!newName.trim()) {
@@ -38,7 +39,19 @@ export default function AdminProfileScreen() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          await logoutUser()
+          setSigningOut(true)
+          try {
+            await logoutUser()
+            // Use getParent() to access the parent Stack navigator
+            navigation.getParent()?.reset({
+              index: 0,
+              routes: [{ name: 'Login' }]
+            })
+          } catch (error) {
+            setSigningOut(false)
+            Alert.alert('Error', 'Failed to sign out. Please try again.')
+            console.log('Sign out error:', error)
+          }
         }
       }
     ])
@@ -97,8 +110,12 @@ export default function AdminProfileScreen() {
       </View>
 
       {/* Sign Out */}
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} disabled={signingOut}>
+        {signingOut ? (
+          <ActivityIndicator color="#E05252" />
+        ) : (
+          <Text style={styles.signOutText}>Sign Out</Text>
+        )}
       </TouchableOpacity>
 
       <Text style={styles.footer}>Mae Fah Luang University • Facilities Management</Text>

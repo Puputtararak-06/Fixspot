@@ -38,7 +38,13 @@ export const loginUser = async (email, password) => {
 
 // ออกจากระบบ
 export const logoutUser = async () => {
-  await signOut(auth)
+  try {
+    await signOut(auth)
+    // Firebase will update auth state and AppContext will handle cleanup
+  } catch (error) {
+    console.log('Logout error:', error)
+    throw error
+  }
 }
 
 // ส่ง email รีเซ็ตรหัสผ่าน

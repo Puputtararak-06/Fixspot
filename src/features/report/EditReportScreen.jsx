@@ -93,8 +93,9 @@ export default function EditReportScreen({ navigation, route }) {
     } catch (e) {
       Alert.alert('Error', 'Failed to update report')
       console.log(e)
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   if (loading) {
