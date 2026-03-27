@@ -3,11 +3,9 @@ import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, Image, StatusBar, Alert, TextInput
 } from 'react-native'
-import { doc, getDoc, deleteDoc, collection, addDoc, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore'
+import { doc, getDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import { useApp } from '../../context/AppContext'
-import * as ImagePicker from 'expo-image-picker'
-import { uploadImage } from '../../services/cloudinaryService'
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending', color: '#E07A2F', bg: '#FFF4EB' },
@@ -23,9 +21,6 @@ export default function ReportDetailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [comments, setComments] = useState([])
-  const [commentText, setCommentText] = useState('')
-  const [commentImage, setCommentImage] = useState(null)
-  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     fetchReport()
@@ -257,47 +252,6 @@ export default function ReportDetailScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Comment Input Form */}
-        <View style={styles.commentFormBox}>
-          <Text style={styles.sectionLabel}>Add a Comment</Text>
-          <TextInput
-            style={styles.commentInput}
-            placeholder="Write your comment..."
-            placeholderTextColor="#A0ADA0"
-            value={commentText}
-            onChangeText={setCommentText}
-            multiline
-            numberOfLines={3}
-            maxLength={300}
-          />
-          <Text style={styles.charCount}>{commentText.length}/300</Text>
-
-          {commentImage && (
-            <View style={styles.imagePreview}>
-              <Image source={{ uri: commentImage }} style={styles.previewImage} />
-              <TouchableOpacity style={styles.removeImage} onPress={() => setCommentImage(null)}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.imageButton} onPress={pickCommentImage} disabled={submitting}>
-              <Text style={styles.imageButtonText}>📷 Add Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.submitCommentButton, submitting && { opacity: 0.7 }]}
-              onPress={handleAddComment}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.submitCommentText}>Send 📤</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* Timeline */}
         <View style={styles.section}>

@@ -11,20 +11,35 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    try {
       if (user) {
         const userDoc = await getDoc(doc(db, 'users', user.uid))
-        const userData = userDoc.data()
-        setCurrentUser({ ...user, ...userData })
-        setUserRole(userData?.role || 'user')
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data()
+          setCurrentUser({ ...user, ...userData })
+          setUserRole(userData?.role || 'user')
+        } else {
+          // ถ้าไม่มี doc ใน Firestore
+          setCurrentUser(user)
+          setUserRole('user')
+        }
       } else {
         setCurrentUser(null)
         setUserRole(null)
       }
-      setLoading(false)
-    })
-    return unsubscribe
-  }, [])
+    } catch (error) {
+      console.log("Auth state error:", error)
+      setCurrentUser(null)
+      setUserRole(null)
+    }
+
+    setLoading(false)
+  })
+
+  return unsubscribe
+}, [])
 
   const updateCurrentUser = (newData) => {
     setCurrentUser(prev => ({ ...prev, ...newData }))
