@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth' // ✨ เปลี่ยนจาก getAuth
 import { getFirestore } from 'firebase/firestore'
+import AsyncStorage from '@react-native-async-storage/async-storage' // ✨ เพิ่มตัวนี้
 
 const firebaseConfig = {
   apiKey: "AIzaSyDf0PQ_p_BzpIQPzc4KQypLA-Yy90xTexE",
@@ -14,5 +15,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 
-export const auth = getAuth(app)
+// ✨ เปลี่ยนวิธี Export auth เพื่อให้มันจำรหัสผ่านในเครื่อง (Persistence)
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage)
+})
+
 export const db = getFirestore(app)

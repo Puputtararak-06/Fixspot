@@ -23,7 +23,21 @@ export default function ManageReportsScreen({ navigation }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    return fetchReports()
+    const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'))
+    // onSnapshot คืนค่าฟังก์ชัน unsubscribe มาให้เลย (ไม่ต้องใช้ async)
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      setReports(data)
+      setFiltered(data)
+      setLoading(false)
+    }, (error) => {
+      console.log("Fetch Error:", error)
+      setLoading(false)
+    })
+
+    // ✅ คืนค่าฟังก์ชัน unsubscribe เพื่อ Cleanup ตอน Unmount (Logout)
+    // หน้าจอจะไม่ค้าง และไม่เกิด error "destroy is not a function"
+    return () => unsubscribe() 
   }, [])
 
   useEffect(() => {
@@ -32,28 +46,15 @@ export default function ManageReportsScreen({ navigation }) {
       result = result.filter(r => r.status === activeFilter)
     }
     if (search) {
+      const searchLower = search.toLowerCase()
       result = result.filter(r =>
-        r.category?.toLowerCase().includes(search.toLowerCase()) ||
-        r.createdByName?.toLowerCase().includes(search.toLowerCase()) ||
-        r.description?.toLowerCase().includes(search.toLowerCase())
+        r.category?.toLowerCase().includes(searchLower) ||
+        r.createdByName?.toLowerCase().includes(searchLower) ||
+        r.description?.toLowerCase().includes(searchLower)
       )
     }
     setFiltered(result)
   }, [activeFilter, search, reports])
-
-  const fetchReports = async () => {
-    const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'))
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      setReports(data)
-      setFiltered(data)
-      setLoading(false)
-    }, (error) => {
-      console.log(error)
-      setLoading(false)
-    })
-    return () => unsubscribe()
-  }
 
   const renderItem = ({ item }) => {
     const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending

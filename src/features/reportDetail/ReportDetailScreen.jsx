@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, Image, StatusBar, Alert, TextInput
+  TouchableOpacity, ActivityIndicator, Image, StatusBar, Alert
 } from 'react-native'
-import { doc, getDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore'
+
+import { doc, getDoc, deleteDoc, query, where, getDocs, collection } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import { useApp } from '../../context/AppContext'
 
@@ -20,25 +21,10 @@ export default function ReportDetailScreen({ navigation, route }) {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
-  const [comments, setComments] = useState([])
 
   useEffect(() => {
     fetchReport()
   }, [])
-
-  useEffect(() => {
-    // Real-time listener for comments
-    const q = query(
-      collection(db, 'reports', reportId, 'comments'),
-      orderBy('createdAt', 'asc')
-    )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-      setComments(data)
-    }, (error) => console.log('Comments listener error:', error))
-
-    return () => unsubscribe()
-  }, [reportId])
 
   const fetchReport = async () => {
     try {
@@ -62,17 +48,11 @@ export default function ReportDetailScreen({ navigation, route }) {
         onPress: async () => {
           setDeleting(true)
           try {
-            // Delete all notifications for this report
-            const q = query(
-              collection(db, 'notifications'),
-              where('reportId', '==', reportId)
-            )
+            const q = query(collection(db, 'notifications'), where('reportId', '==', reportId))
             const snapshot = await getDocs(q)
             for (const docSnap of snapshot.docs) {
               await deleteDoc(docSnap.ref)
             }
-
-            // Delete the report
             await deleteDoc(doc(db, 'reports', reportId))
             navigation.goBack()
           } catch (e) {
@@ -83,52 +63,6 @@ export default function ReportDetailScreen({ navigation, route }) {
         }
       }
     ])
-  }
-
-  const pickCommentImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    })
-    if (!result.canceled) {
-      setCommentImage(result.assets[0].uri)
-    }
-  }
-
-  const handleAddComment = async () => {
-    if (!commentText.trim()) {
-      Alert.alert('Error', 'Please enter a comment')
-      return
-    }
-
-    setSubmitting(true)
-    try {
-      let imageUrl = null
-      if (commentImage) {
-        imageUrl = await uploadImage(commentImage)
-      }
-
-      await addDoc(collection(db, 'reports', reportId, 'comments'), {
-        text: commentText.trim(),
-        imageUrl,
-        userId: currentUser.uid,
-        userName: currentUser.name,
-        userRole: currentUser.role || 'user',
-        createdAt: new Date().toISOString(),
-      })
-
-      // Reset form
-      setCommentText('')
-      setCommentImage(null)
-      Alert.alert('Success', 'Comment added!')
-    } catch (e) {
-      Alert.alert('Error', 'Failed to add comment')
-      console.log(e)
-    } finally {
-      setSubmitting(false)
-    }
   }
 
   if (loading) {
@@ -151,7 +85,12 @@ export default function ReportDetailScreen({ navigation, route }) {
   const canDelete = report.status === 'pending'
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.scrollContent} 
+      showsVerticalScrollIndicator={false}
+      scrollEnabled={true}
+    >
       <StatusBar barStyle="dark-content" />
 
       {/* Header */}
@@ -164,7 +103,6 @@ export default function ReportDetailScreen({ navigation, route }) {
       </View>
 
       <View style={styles.content}>
-
         {/* Status Badge */}
         <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
           <Text style={[styles.statusText, { color: status.color }]}>● {status.label}</Text>
@@ -180,15 +118,15 @@ export default function ReportDetailScreen({ navigation, route }) {
         {report.imageUrl && (
           <View>
             <Text style={styles.imageLabel}>Issue Photo</Text>
-            <Image source={{ uri: report.imageUrl }} style={styles.image} />
+            <Image source={{ uri: report.imageUrl }} style={styles.image} resizeMode="cover" />
           </View>
         )}
 
-        {/* Completion Photo — resolved only */}
+        {/* Completion Photo */}
         {report.status === 'resolved' && report.completionImage && (
           <View>
             <Text style={styles.imageLabel}>✅ Completion Photo</Text>
-            <Image source={{ uri: report.completionImage }} style={styles.image} />
+            <Image source={{ uri: report.completionImage }} style={styles.image} resizeMode="cover" />
           </View>
         )}
 
@@ -226,34 +164,9 @@ export default function ReportDetailScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* Comments Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>💬 Comments ({comments.length})</Text>
-          {comments.length === 0 ? (
-            <Text style={styles.emptyText}>No comments yet</Text>
-          ) : (
-            <View style={styles.commentsList}>
-              {comments.map((comment) => (
-                <View key={comment.id} style={styles.commentItem}>
-                  <View style={styles.commentHeader}>
-                    <Text style={styles.commentAuthor}>{comment.userName}</Text>
-                    <Text style={styles.commentRole}>{comment.userRole === 'admin' ? '🛡️ Admin' : '👤 User'}</Text>
-                  </View>
-                  <Text style={styles.commentText}>{comment.text}</Text>
-                  {comment.imageUrl && (
-                    <Image source={{ uri: comment.imageUrl }} style={styles.commentImage} />
-                  )}
-                  <Text style={styles.commentDate}>
-                    {new Date(comment.createdAt).toLocaleDateString('en-GB')}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        {/* ✨ ส่วน Comment Section ถูกลบออกไปทั้งหมดแล้วตามคำขอครับ */}
 
-
-        {/* Timeline */}
+        {/* Status Timeline */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Status Timeline</Text>
           <View style={styles.timeline}>
@@ -261,9 +174,7 @@ export default function ReportDetailScreen({ navigation, route }) {
               const statuses = ['pending', 'in_progress', 'resolved', 'rejected']
               const currentIndex = statuses.indexOf(report.status)
               const stepIndex = statuses.indexOf(s)
-              const isActive = report.status === 'rejected'
-                ? s === 'pending'
-                : stepIndex <= currentIndex
+              const isActive = report.status === 'rejected' ? s === 'pending' : stepIndex <= currentIndex
               return (
                 <View key={s} style={styles.timelineRow}>
                   <View style={[styles.timelineDot, isActive && styles.timelineDotActive]} />
@@ -277,78 +188,54 @@ export default function ReportDetailScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* Delete Button — pending only */}
+        {/* Delete Button */}
         {canDelete && (
           <TouchableOpacity
             style={[styles.deleteButton, deleting && { opacity: 0.7 }]}
             onPress={handleDelete}
             disabled={deleting}
           >
-            {deleting ? (
-              <ActivityIndicator color="#E05252" />
-            ) : (
-              <Text style={styles.deleteText}>🗑️ Delete Report</Text>
-            )}
+            {deleting ? <ActivityIndicator color="#E05252" /> : <Text style={styles.deleteText}>🗑️ Delete Report</Text>}
           </TouchableOpacity>
         )}
-
       </View>
-      <View style={{ height: 40 }} />
     </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7F5' },
+  container: { flex: 1, backgroundColor: '#F5F7F5', touchAction: 'pan-y' },
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scrollContent: { flexGrow: 1, paddingBottom: 60, overflow: 'visible' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ebfdf6',
-    paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#ebfdf6', paddingTop: 60, paddingBottom: 16, paddingHorizontal: 16,
   },
   backButton: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#fff',
+    width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff',
     justifyContent: 'center', alignItems: 'center',
   },
   backIcon: { fontSize: 28, color: '#2D7A5F', lineHeight: 32 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A2E1A' },
   content: { padding: 24 },
   statusBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginBottom: 16,
+    alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 14,
+    paddingVertical: 6, marginBottom: 16,
   },
   statusText: { fontSize: 14, fontWeight: '600' },
-  categoryRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 10, marginBottom: 16,
-  },
+  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
   categoryIcon: { fontSize: 32 },
   categoryLabel: { fontSize: 22, fontWeight: '700', color: '#1A2E1A' },
   imageLabel: { fontSize: 13, color: '#6B7C6B', fontWeight: '600', marginBottom: 8 },
-  image: {
-    width: '100%', height: 220,
-    borderRadius: 16, marginBottom: 20,
-  },
+  image: { width: '100%', height: 220, borderRadius: 16, marginBottom: 20, backgroundColor: '#E8EEE8' },
   section: {
-    backgroundColor: '#fff',
-    borderRadius: 14, padding: 16,
-    marginBottom: 12,
+    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12,
     borderWidth: 1, borderColor: '#E8EEE8',
   },
   sectionLabel: { fontSize: 12, color: '#A0ADA0', fontWeight: '600', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   sectionValue: { fontSize: 15, color: '#1A2E1A', lineHeight: 22 },
   adminNoteBox: {
-    backgroundColor: '#ebfdf6',
-    borderRadius: 14, padding: 16,
-    marginBottom: 12,
+    backgroundColor: '#ebfdf6', borderRadius: 14, padding: 16, marginBottom: 12,
     borderWidth: 1, borderColor: '#2D7A5F',
   },
   adminNoteLabel: { fontSize: 13, color: '#2D7A5F', fontWeight: '700', marginBottom: 6 },
@@ -356,8 +243,7 @@ const styles = StyleSheet.create({
   timeline: { marginTop: 8, gap: 4 },
   timelineRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   timelineDot: {
-    width: 12, height: 12, borderRadius: 6,
-    backgroundColor: '#E8EEE8',
+    width: 12, height: 12, borderRadius: 6, backgroundColor: '#E8EEE8',
     borderWidth: 2, borderColor: '#E8EEE8',
   },
   timelineDotActive: { backgroundColor: '#2D7A5F', borderColor: '#2D7A5F' },
@@ -366,51 +252,8 @@ const styles = StyleSheet.create({
   timelineLabel: { fontSize: 14, color: '#A0ADA0' },
   timelineLabelActive: { color: '#2D7A5F', fontWeight: '600' },
   deleteButton: {
-    marginTop: 8,
-    backgroundColor: '#fff',
-    borderRadius: 14, padding: 16,
-    alignItems: 'center',
-    borderWidth: 1, borderColor: '#FDEAEA',
+    marginTop: 8, backgroundColor: '#fff', borderRadius: 14, padding: 16,
+    alignItems: 'center', borderWidth: 1, borderColor: '#FDEAEA',
   },
   deleteText: { color: '#E05252', fontSize: 15, fontWeight: '600' },
-  emptyText: { fontSize: 14, color: '#A0ADA0', fontStyle: 'italic' },
-  commentsList: { gap: 12, marginTop: 8 },
-  commentItem: {
-    backgroundColor: '#F5F7F5', borderRadius: 12, padding: 12,
-    borderLeftWidth: 3, borderLeftColor: '#2D7A5F',
-  },
-  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  commentAuthor: { fontSize: 13, fontWeight: '600', color: '#1A2E1A' },
-  commentRole: { fontSize: 11, color: '#6B7C6B' },
-  commentText: { fontSize: 14, color: '#1A2E1A', lineHeight: 20, marginBottom: 6 },
-  commentImage: { width: '100%', height: 150, borderRadius: 10, marginBottom: 8 },
-  commentDate: { fontSize: 11, color: '#A0ADA0' },
-  commentFormBox: {
-    backgroundColor: '#fff', borderRadius: 14, padding: 16,
-    marginTop: 12, marginBottom: 12,
-    borderWidth: 1, borderColor: '#E8EEE8',
-  },
-  commentInput: {
-    backgroundColor: '#F5F7F5', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 14, color: '#1A2E1A', height: 100, textAlignVertical: 'top',
-    marginBottom: 4, borderWidth: 1, borderColor: '#E8EEE8',
-  },
-  charCount: { fontSize: 11, color: '#A0ADA0', textAlign: 'right', marginBottom: 12 },
-  imagePreview: { marginBottom: 12, borderRadius: 10, overflow: 'hidden', position: 'relative' },
-  previewImage: { width: '100%', height: 120, borderRadius: 10 },
-  removeImage: {
-    position: 'absolute', top: 4, right: 4, width: 24, height: 24, borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center',
-  },
-  actionRow: { flexDirection: 'row', gap: 10 },
-  imageButton: {
-    flex: 1, backgroundColor: '#ebfdf6', borderRadius: 10, paddingVertical: 12,
-    alignItems: 'center', borderWidth: 1, borderColor: '#2D7A5F',
-  },
-  imageButtonText: { color: '#2D7A5F', fontSize: 13, fontWeight: '600' },
-  submitCommentButton: {
-    flex: 1, backgroundColor: '#2D7A5F', borderRadius: 10, paddingVertical: 12,
-    alignItems: 'center',
-  },
-  submitCommentText: { color: '#fff', fontSize: 13, fontWeight: '600' },
 })

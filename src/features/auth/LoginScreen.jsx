@@ -6,6 +6,10 @@ import {
 } from 'react-native'
 import { loginUser, resetPassword } from '../../services/authService'
 
+// ✨ 1. เพิ่ม Import สำหรับเช็คข้อมูลใน Firestore
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '../../services/firebase'
+
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -24,13 +28,25 @@ export default function LoginScreen({ navigation }) {
     setError('')
     setLoading(true)
     try {
-      const { role } = await loginUser(email, password)
-      if (role === 'admin') {
-        navigation.replace('AdminTabs')
-      } else {
-        navigation.replace('UserTabs')
+      // ✨ 2. แก้ไข Logic ตรงนี้เพื่อเช็ค PDPA
+      const response = await loginUser(email, password)
+      
+      // ดึงข้อมูล User จาก Firestore มาเช็ค (กรณีที่ loginUser คืนค่ามาแค่ auth)
+      const userDoc = await getDoc(doc(db, 'users', response.user.uid))
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        
+        // 🛡️ เช็คว่ายอมรับ PDPA หรือยัง
+        if (!userData.pdpaAccepted) {
+          // ถ้ายังไม่ยอมรับ ให้วาร์ปไปหน้า PDPA พร้อมส่ง userId ไปด้วย
+          navigation.replace('PDPA', { userId: response.user.uid })
+          return 
+        }
       }
+      // ถ้ายอมรับแล้ว AppNavigator จะจัดการพาไปหน้า Home เอง
     } catch (e) {
+      console.log(e)
       setError('Invalid email or password')
       setLoading(false)
     }
@@ -153,6 +169,7 @@ export default function LoginScreen({ navigation }) {
   )
 }
 
+// 🎨 ส่วนนี้แหละที่นายทำหายไป! ห้ามลืมก๊อปนะ
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ebfdf6', justifyContent: 'center', paddingHorizontal: 28 },
   logoContainer: { alignItems: 'center', marginBottom: 40 },
