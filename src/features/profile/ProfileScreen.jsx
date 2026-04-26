@@ -8,8 +8,9 @@ import { db } from '../../services/firebase'
 import { useApp } from '../../context/AppContext'
 import { logoutUser } from '../../services/authService'
 
+
 export default function ProfileScreen({ navigation }) {
-  const { currentUser, updateCurrentUser } = useApp()
+  const { currentUser, updateCurrentUser , logout} = useApp()
   const [editing, setEditing] = useState(false)
   const [newName, setNewName] = useState(currentUser?.name || '')
   const [loading, setLoading] = useState(false)
@@ -48,12 +49,7 @@ export default function ProfileScreen({ navigation }) {
         onPress: async () => {
           if (isMounted.current) setSigningOut(true)
           try {
-            await logoutUser()
-            // Use getParent() to access the parent Stack navigator
-            navigation.getParent()?.reset({
-              index: 0,
-              routes: [{ name: 'Login' }]
-            })
+            await logout()
           } catch (error) {
             if (isMounted.current) {
               setSigningOut(false)

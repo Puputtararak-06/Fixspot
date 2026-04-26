@@ -12,16 +12,17 @@ export const registerUser = async (email, password, name) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password)
   const user = userCredential.user
 
-  // เก็บข้อมูลเพิ่มเติมใน Firestore
+  // ✨ เพิ่ม Field pdpaAccepted: false เข้าไปตั้งแต่ตอนสมัคร
   await setDoc(doc(db, 'users', user.uid), {
     uid: user.uid,
-    name: name,
+    name: name, 
     email: email,
     role: 'user',
+    pdpaAccepted: false, // ✨ ตั้งค่าเริ่มต้นเป็น false
     createdAt: new Date().toISOString()
   })
 
-  return user
+  return user // คืนค่า user object กลับไปเพื่อให้หน้า Register เอาไปใช้ต่อได้
 }
 
 // เข้าสู่ระบบ
@@ -29,32 +30,35 @@ export const loginUser = async (email, password) => {
   const userCredential = await signInWithEmailAndPassword(auth, email, password)
   const user = userCredential.user
 
-  // ดึง role จาก Firestore
+  // ดึงข้อมูลทั้งหมดจาก Firestore (รวมทั้ง role และ pdpaAccepted)
   const userDoc = await getDoc(doc(db, 'users', user.uid))
   const userData = userDoc.data()
 
-  return { user, role: userData?.role || 'user' }
+  // คืนค่ากลับไปเป็น Object เพื่อให้หน้า Login เช็คต่อได้ง่ายๆ
+  return { 
+    user, 
+    role: userData?.role || 'user',
+    pdpaAccepted: userData?.pdpaAccepted || false // ✨ ส่งค่านี้กลับไปด้วย
+  }
 }
 
 // ออกจากระบบ
 export const logoutUser = async () => {
   try {
     await signOut(auth)
-    // Firebase will update auth state and AppContext will handle cleanup
   } catch (error) {
     console.log('Logout error:', error)
     throw error
   }
 }
 
-// ส่ง email รีเซ็ตรหัสผ่าน
+// ส่ง email รีเซ็ตรหัสผ่าน (โค้ดของนายดีอยู่แล้ว พี่เก็บไว้ให้ครบ)
 export const resetPassword = async (email) => {
   if (!email || !email.trim()) {
     throw new Error('Please enter your email')
   }
 
   try {
-    // Send password reset email
     await sendPasswordResetEmail(auth, email)
   } catch (error) {
     if (error.code === 'auth/user-not-found') {

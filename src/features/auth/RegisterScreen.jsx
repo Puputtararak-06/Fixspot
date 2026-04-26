@@ -15,7 +15,8 @@ export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleRegister = async () => {
+ const handleRegister = async () => {
+    // 1. Validation (เหมือนเดิม)
     if (!name || !email || !password || !confirmPassword) {
       setError('Please fill in all fields')
       return
@@ -28,13 +29,24 @@ export default function RegisterScreen({ navigation }) {
       setError('Password must be at least 6 characters')
       return
     }
+
     setError('')
     setLoading(true)
+
     try {
+      // ✨ 2. เรียกสมัครสมาชิก "ครั้งเดียว" และเก็บค่า User ไว้
       await registerUser(email, password, name)
-      navigation.replace('Login')
+      
+      
+
     } catch (e) {
-      setError('Email already in use or an error occurred')
+      console.log("Register Error:", e)
+      // เช็ค Error เฉพาะกรณีเมลซ้ำ
+      if (e.code === 'auth/email-already-in-use') {
+        setError('This email is already registered')
+      } else {
+        setError('An error occurred during registration')
+      }
       setLoading(false)
     }
   }

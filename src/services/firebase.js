@@ -1,6 +1,12 @@
-import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { 
+  getAuth, 
+  initializeAuth, 
+  getReactNativePersistence 
+} from 'firebase/auth';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDf0PQ_p_BzpIQPzc4KQypLA-Yy90xTexE",
@@ -12,7 +18,20 @@ const firebaseConfig = {
   measurementId: "G-CGKKGJEK62"
 };
 
-const app = initializeApp(firebaseConfig)
+const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app)
-export const db = getFirestore(app)
+// 🛡️ ฟังก์ชันสร้าง Auth แบบแยกโลก
+const getFirebaseAuth = () => {
+  if (Platform.OS === 'web') {
+    // 🌐 โลกของ Web: ใช้ getAuth แบบมาตรฐาน (เบราว์เซอร์รู้จักดี)
+    return getAuth(app);
+  } else {
+    // 📱 โลกของ Mobile: ใช้ initializeAuth คู่กับ AsyncStorage
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  }
+};
+
+export const auth = getFirebaseAuth();
+export const db = getFirestore(app);

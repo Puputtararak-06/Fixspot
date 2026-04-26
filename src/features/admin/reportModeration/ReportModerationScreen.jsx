@@ -133,9 +133,6 @@ export default function ReportModerationScreen({ navigation, route }) {
                 'in_progress',
                 `Your report "${report.category}" has been started. We're working on it!`
               )
-
-              await markNotificationAsRead()
-
               Alert.alert('Success ✅', 'Task started!', [
                 { text: 'OK', onPress: () => navigation.goBack() }
               ])
@@ -173,9 +170,6 @@ export default function ReportModerationScreen({ navigation, route }) {
                 'rejected',
                 `Your report "${report.category}" has been rejected. Admin note: ${adminNote || 'No note provided'}`
               )
-
-              await markNotificationAsRead()
-
               Alert.alert('Success ✅', 'Report rejected!', [
                 { text: 'OK', onPress: () => navigation.goBack() }
               ])
@@ -223,9 +217,6 @@ export default function ReportModerationScreen({ navigation, route }) {
                 'resolved',
                 `Your report "${report.category}" has been resolved! Check the completion photo.`
               )
-
-              await markNotificationAsRead()
-
               Alert.alert('Success ✅', 'Task marked as done!', [
                 { text: 'OK', onPress: () => navigation.goBack() }
               ])

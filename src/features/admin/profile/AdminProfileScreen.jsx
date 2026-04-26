@@ -9,7 +9,7 @@ import { useApp } from '../../../context/AppContext'
 import { logoutUser } from '../../../services/authService'
 
 export default function AdminProfileScreen({ navigation }) {
-  const { currentUser, updateCurrentUser } = useApp()
+  const { currentUser, updateCurrentUser , logout} = useApp()
   const [editing, setEditing] = useState(false)
   const [newName, setNewName] = useState(currentUser?.name || '')
   const [loading, setLoading] = useState(false)
@@ -41,12 +41,7 @@ export default function AdminProfileScreen({ navigation }) {
         onPress: async () => {
           setSigningOut(true)
           try {
-            await logoutUser()
-            // Use getParent() to access the parent Stack navigator
-            navigation.getParent()?.reset({
-              index: 0,
-              routes: [{ name: 'Login' }]
-            })
+            await logout()
           } catch (error) {
             setSigningOut(false)
             Alert.alert('Error', 'Failed to sign out. Please try again.')
