@@ -1,7 +1,12 @@
-import { initializeApp } from 'firebase/app'
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth' // ✨ เปลี่ยนจาก getAuth
-import { getFirestore } from 'firebase/firestore'
-import AsyncStorage from '@react-native-async-storage/async-storage' // ✨ เพิ่มตัวนี้
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { 
+  getAuth, 
+  initializeAuth, 
+  getReactNativePersistence 
+} from 'firebase/auth';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDf0PQ_p_BzpIQPzc4KQypLA-Yy90xTexE",
@@ -13,11 +18,20 @@ const firebaseConfig = {
   measurementId: "G-CGKKGJEK62"
 };
 
-const app = initializeApp(firebaseConfig)
+const app = initializeApp(firebaseConfig);
 
-// ✨ เปลี่ยนวิธี Export auth เพื่อให้มันจำรหัสผ่านในเครื่อง (Persistence)
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-})
+// 🛡️ ฟังก์ชันสร้าง Auth แบบแยกโลก
+const getFirebaseAuth = () => {
+  if (Platform.OS === 'web') {
+    // 🌐 โลกของ Web: ใช้ getAuth แบบมาตรฐาน (เบราว์เซอร์รู้จักดี)
+    return getAuth(app);
+  } else {
+    // 📱 โลกของ Mobile: ใช้ initializeAuth คู่กับ AsyncStorage
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  }
+};
 
-export const db = getFirestore(app)
+export const auth = getFirebaseAuth();
+export const db = getFirestore(app);

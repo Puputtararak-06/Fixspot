@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "5f0ca8be-5a45-4974-a12e-7f0327050903"
+      }
+    },
+    "android": {
+      "package": "com.pupattararak.fixspot"
+    }
+  }
+}

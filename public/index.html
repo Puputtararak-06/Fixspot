@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixSpot — Infrastructure Issue Reporting</title>
+<meta name="description" content="FixSpot helps Mae Fah Luang University students and staff report campus infrastructure issues instantly. Snap a photo, pin the location, and track repairs in real time.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green-dark: #1a5c42;
+    --green-mid: #2D7A5F;
+    --green-light: #3fa37f;
+    --green-pale: #ebfdf6;
+    --green-muted: #c5f0de;
+    --cream: #faf9f6;
+    --ink: #141c18;
+    --ink-mid: #3a4a41;
+    --ink-muted: #6b7d74;
+    --white: #ffffff;
+    --radius: 16px;
+    --radius-sm: 8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 5%;
+    background: rgba(250,249,246,0.88);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(45,122,95,0.12);
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem; color: var(--green-dark);
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--green-mid);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 18px;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--ink-mid); text-decoration: none;
+    font-size: 0.9rem; font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--green-mid); }
+  .nav-cta {
+    background: var(--green-mid); color: white;
+    padding: 0.5rem 1.25rem; border-radius: 50px;
+    text-decoration: none; font-size: 0.88rem; font-weight: 500;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .nav-cta:hover { background: var(--green-dark); transform: translateY(-1px); }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid; grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 8rem 5% 4rem;
+    gap: 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; top: -200px; right: -200px;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, var(--green-muted) 0%, transparent 70%);
+    opacity: 0.4; pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--green-pale); color: var(--green-dark);
+    border: 1px solid var(--green-muted);
+    border-radius: 50px; padding: 0.35rem 1rem;
+    font-size: 0.82rem; font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+  .hero-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--green-mid); }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.8rem, 5vw, 4.2rem);
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 em { color: var(--green-mid); font-style: italic; }
+  .hero p {
+    font-size: 1.1rem; color: var(--ink-mid);
+    line-height: 1.7; max-width: 480px;
+    margin-bottom: 2.5rem;
+  }
+  .hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--green-mid); color: white;
+    padding: 0.875rem 2rem; border-radius: 50px;
+    font-size: 1rem; font-weight: 500; text-decoration: none;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(45,122,95,0.3);
+  }
+  .btn-primary:hover { background: var(--green-dark); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(45,122,95,0.4); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: white; color: var(--green-dark);
+    border: 1.5px solid var(--green-muted);
+    padding: 0.875rem 2rem; border-radius: 50px;
+    font-size: 1rem; font-weight: 500; text-decoration: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--green-mid); background: var(--green-pale); }
+
+  /* ── PHONE MOCKUP ── */
+  .hero-visual { display: flex; justify-content: center; align-items: center; }
+  .phone-wrap {
+    position: relative; animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+  .phone-frame {
+    width: 260px; height: 520px;
+    background: var(--ink);
+    border-radius: 40px;
+    padding: 14px;
+    box-shadow: 0 40px 80px rgba(20,28,24,0.25), 0 0 0 1px rgba(255,255,255,0.06);
+    position: relative;
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    background: white;
+    border-radius: 28px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .phone-status {
+    background: var(--green-mid); color: white;
+    padding: 12px 16px 8px;
+    font-size: 11px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .phone-header {
+    background: var(--green-mid); color: white;
+    padding: 8px 16px 14px;
+  }
+  .phone-header-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .phone-header-sub { font-size: 10px; opacity: 0.8; }
+  .phone-body { flex: 1; padding: 12px; overflow: hidden; background: #f5f7f6; }
+  .phone-card {
+    background: white; border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .phone-card-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--green-pale);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .phone-card-body { flex: 1; }
+  .phone-card-title { font-size: 11px; font-weight: 600; color: var(--ink); }
+  .phone-card-sub { font-size: 9px; color: var(--ink-muted); margin: 2px 0; }
+  .badge {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 8px; font-weight: 600;
+  }
+  .badge-pending { background: #fff3cd; color: #856404; }
+  .badge-progress { background: #cfe2ff; color: #084298; }
+  .badge-resolved { background: #d1e7dd; color: #0a3622; }
+  .phone-fab {
+    position: absolute; bottom: 22px; right: 22px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--green-mid);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 20px; font-weight: 300;
+    box-shadow: 0 4px 12px rgba(45,122,95,0.5);
+  }
+  .phone-notch {
+    position: absolute; top: 14px; left: 50%;
+    transform: translateX(-50%);
+    width: 80px; height: 22px;
+    background: var(--ink); border-radius: 0 0 14px 14px;
+    z-index: 10;
+  }
+
+  /* ── STATS ── */
+  .stats-bar {
+    background: var(--green-dark);
+    padding: 2.5rem 5%;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 2rem; text-align: center;
+  }
+  .stat-item { color: white; }
+  .stat-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.5rem; display: block;
+  }
+  .stat-label { font-size: 0.85rem; opacity: 0.7; margin-top: 4px; }
+
+  /* ── SECTIONS ── */
+  section { padding: 6rem 5%; }
+  .section-tag {
+    display: inline-block;
+    background: var(--green-pale); color: var(--green-dark);
+    border: 1px solid var(--green-muted);
+    padding: 0.3rem 1rem; border-radius: 50px;
+    font-size: 0.8rem; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.15; margin-bottom: 1rem;
+  }
+  .section-sub {
+    font-size: 1.05rem; color: var(--ink-muted);
+    line-height: 1.7; max-width: 560px;
+  }
+
+  /* ── FEATURES ── */
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem; margin-top: 4rem;
+  }
+  .feat-card {
+    background: white; border-radius: var(--radius);
+    padding: 2rem;
+    border: 1px solid rgba(45,122,95,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .feat-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(45,122,95,0.1); }
+  .feat-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: var(--green-pale);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 1.25rem;
+  }
+  .feat-title { font-weight: 600; font-size: 1.05rem; margin-bottom: 0.5rem; }
+  .feat-desc { font-size: 0.9rem; color: var(--ink-muted); line-height: 1.6; }
+
+  /* ── HOW IT WORKS ── */
+  .how-section { background: var(--green-pale); }
+  .steps-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 2rem; margin-top: 4rem; position: relative;
+  }
+  .steps-grid::before {
+    content: '';
+    position: absolute; top: 28px; left: 8%; right: 8%;
+    height: 2px; background: var(--green-muted);
+    z-index: 0;
+  }
+  .step-item { text-align: center; position: relative; z-index: 1; }
+  .step-num {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--green-mid); color: white;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+    box-shadow: 0 4px 16px rgba(45,122,95,0.3);
+  }
+  .step-title { font-weight: 600; margin-bottom: 0.4rem; }
+  .step-desc { font-size: 0.88rem; color: var(--ink-muted); line-height: 1.5; }
+
+  /* ── SCREENSHOTS ── */
+  .screens-row {
+    display: flex; gap: 1.25rem; justify-content: center;
+    margin-top: 4rem; flex-wrap: wrap; align-items: flex-end;
+  }
+  .screen-item { text-align: center; }
+  .screen-frame {
+    width: 180px; height: 360px;
+    background: var(--ink);
+    border-radius: 28px; padding: 10px;
+    box-shadow: 0 20px 50px rgba(20,28,24,0.2);
+    transition: transform 0.3s;
+    display: inline-block;
+  }
+  .screen-frame:hover { transform: translateY(-8px) rotate(-1deg); }
+  .screen-frame.center { transform: scale(1.1); }
+  .screen-frame.center:hover { transform: scale(1.1) translateY(-8px); }
+  .screen-inner {
+    width: 100%; height: 100%;
+    border-radius: 20px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .screen-label { font-size: 0.82rem; color: var(--ink-muted); margin-top: 1rem; font-weight: 500; }
+
+  /* mini screen content variants */
+  .screen-home .sh { background: var(--green-mid); padding: 16px 12px 10px; color: white; }
+  .screen-home .sh-title { font-size: 11px; font-weight: 600; }
+  .screen-home .sh-sub { font-size: 9px; opacity: 0.7; }
+  .screen-home .sb { flex: 1; background: #f5f7f6; padding: 10px; }
+  .screen-home .sm { background: white; border-radius: 8px; margin-bottom: 6px; padding: 8px; display: flex; gap: 6px; align-items: flex-start; }
+  .screen-home .si { width: 24px; height: 24px; border-radius: 6px; background: var(--green-pale); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .screen-home .st { font-size: 9px; font-weight: 600; color: var(--ink); }
+  .screen-home .ss { font-size: 8px; color: var(--ink-muted); }
+
+  .screen-report .sr-top { background: var(--green-mid); padding: 14px 12px 10px; color: white; }
+  .screen-report .sr-title { font-size: 11px; font-weight: 600; }
+  .screen-report .sr-body { flex: 1; background: white; padding: 10px; }
+  .screen-report .sr-photo { width: 100%; height: 80px; background: #e0f0e9; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .screen-report .sr-label { font-size: 8px; color: var(--ink-muted); margin-bottom: 3px; }
+  .screen-report .sr-input { background: #f5f7f6; border-radius: 6px; padding: 5px 8px; font-size: 9px; color: var(--ink-mid); margin-bottom: 6px; }
+  .screen-report .sr-btn { background: var(--green-mid); color: white; border-radius: 20px; padding: 6px; text-align: center; font-size: 9px; font-weight: 600; margin-top: 4px; }
+
+  .screen-status .ss-top { background: var(--green-mid); padding: 14px 12px 10px; color: white; }
+  .screen-status .ss-title { font-size: 11px; font-weight: 600; }
+  .screen-status .ss-body { flex: 1; background: white; padding: 10px; }
+  .screen-status .ss-step { display: flex; gap: 8px; margin-bottom: 10px; align-items: flex-start; }
+  .screen-status .ss-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: white; }
+  .screen-status .ss-dot.done { background: var(--green-mid); }
+  .screen-status .ss-dot.active { background: #0d6efd; }
+  .screen-status .ss-dot.todo { background: #dee2e6; }
+  .screen-status .ss-line { font-size: 9px; }
+  .screen-status .ss-line-title { font-weight: 600; color: var(--ink); }
+  .screen-status .ss-line-sub { color: var(--ink-muted); }
+
+  /* ── PRIVACY ── */
+  .privacy-section { background: white; }
+  .privacy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; margin-top: 4rem; align-items: start; }
+  .privacy-block h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--green-dark); }
+  .privacy-block p { font-size: 0.9rem; color: var(--ink-muted); line-height: 1.7; margin-bottom: 1rem; }
+  .privacy-list { list-style: none; }
+  .privacy-list li {
+    font-size: 0.9rem; color: var(--ink-mid);
+    padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0;
+    display: flex; gap: 8px; align-items: flex-start;
+    line-height: 1.5;
+  }
+  .privacy-list li::before { content: '✓'; color: var(--green-mid); font-weight: 700; flex-shrink: 0; }
+  .rights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+  .right-card {
+    background: var(--green-pale); border-radius: var(--radius-sm);
+    padding: 1rem; border: 1px solid var(--green-muted);
+  }
+  .right-card h4 { font-size: 0.85rem; font-weight: 600; color: var(--green-dark); margin-bottom: 0.25rem; }
+  .right-card p { font-size: 0.8rem; color: var(--ink-muted); line-height: 1.5; margin: 0; }
+
+  /* ── CONTACT ── */
+  .contact-section { background: var(--ink); color: white; }
+  .contact-inner { max-width: 800px; margin: 0 auto; text-align: center; }
+  .contact-inner .section-title { color: white; }
+  .contact-inner .section-sub { color: rgba(255,255,255,0.6); margin: 0 auto 3rem; }
+  .contact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 3rem; }
+  .contact-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius); padding: 1.5rem;
+  }
+  .contact-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+  .contact-card h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; }
+  .contact-card p { font-size: 0.85rem; color: rgba(255,255,255,0.5); }
+  .contact-card a { color: var(--green-light); text-decoration: none; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: #0d1610; color: rgba(255,255,255,0.4);
+    padding: 2rem 5%;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.82rem;
+  }
+  footer a { color: rgba(255,255,255,0.4); text-decoration: none; }
+  footer a:hover { color: var(--green-light); }
+  .footer-links { display: flex; gap: 1.5rem; }
+
+  /* ── DOWNLOAD SECTION ── */
+  .download-section { background: var(--green-mid); text-align: center; padding: 5rem 5%; }
+  .download-section .section-title { color: white; }
+  .download-section .section-sub { color: rgba(255,255,255,0.75); margin: 0 auto 2.5rem; }
+  .download-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .dl-btn {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: white; color: var(--green-dark);
+    padding: 0.875rem 1.75rem; border-radius: 14px;
+    text-decoration: none; font-weight: 500;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+  .dl-btn .dl-icon { font-size: 1.5rem; }
+  .dl-btn .dl-text { text-align: left; }
+  .dl-btn .dl-text small { display: block; font-size: 0.72rem; color: var(--ink-muted); }
+  .dl-btn .dl-text span { font-size: 1rem; font-weight: 600; }
+  .coming-soon {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.15); color: white;
+    border: 1.5px dashed rgba(255,255,255,0.4);
+    padding: 0.875rem 1.75rem; border-radius: 14px;
+    font-size: 0.9rem;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; text-align: center; padding-top: 6rem; }
+    .hero p { max-width: 100%; }
+    .hero-btns { justify-content: center; }
+    .hero-visual { order: -1; }
+    .features-grid { grid-template-columns: 1fr 1fr; }
+    .steps-grid { grid-template-columns: 1fr 1fr; }
+    .steps-grid::before { display: none; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .privacy-grid { grid-template-columns: 1fr; }
+    .contact-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+  }
+  @media (max-width: 600px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .steps-grid { grid-template-columns: 1fr; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    footer { flex-direction: column; gap: 1rem; text-align: center; }
+  }
+
+  /* ── ANIMATIONS ── */
+  .fade-up { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .fade-up.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="logo-icon">📍</div>
+    FixSpot
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#privacy">Privacy</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a href="#download" class="nav-cta">Get the App</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge"><span></span> Mae Fah Luang University</div>
+    <h1>Report campus issues. <em>Get them fixed.</em></h1>
+    <p>FixSpot connects students and staff with the maintenance team — instantly. Snap a photo, drop a pin, and watch your report get resolved in real time.</p>
+    <div class="hero-btns">
+      <a href="#download" class="btn-primary">📱 Download App</a>
+      <a href="#how" class="btn-secondary">See how it works</a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="phone-wrap">
+      <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-screen" style="background:#f0f4f2;">
+          <!-- Top greeting -->
+          <div style="background:white; padding:14px 14px 10px; display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-size:10px; color:#888;">Hello 👋</div>
+              <div style="font-size:13px; font-weight:700; color:#141c18;">Pupattararak</div>
+            </div>
+            <div style="position:relative;">
+              <div style="width:28px;height:28px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:13px;">🔔</div>
+              <div style="position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:#e53935;font-size:7px;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">2</div>
+            </div>
+          </div>
+          <!-- Status cards -->
+          <div style="padding:8px 10px; background:white; margin-bottom:6px;">
+            <div style="font-size:10px;font-weight:700;margin-bottom:6px;color:#141c18;">Report Status</div>
+            <div style="display:flex;gap:5px;">
+              <div style="flex:1;background:#fff3e0;border-radius:8px;padding:6px;text-align:center;">
+                <div style="font-size:14px;font-weight:700;color:#e65100;">0</div>
+                <div style="font-size:7px;color:#888;">Pending</div>
+              </div>
+              <div style="flex:1;background:#e8eaf6;border-radius:8px;padding:6px;text-align:center;">
+                <div style="font-size:14px;font-weight:700;color:#3949ab;">0</div>
+                <div style="font-size:7px;color:#888;">In Progress</div>
+              </div>
+              <div style="flex:1;background:#e8f5e9;border-radius:8px;padding:6px;text-align:center;">
+                <div style="font-size:14px;font-weight:700;color:#2D7A5F;">6</div>
+                <div style="font-size:7px;color:#888;">Resolved</div>
+              </div>
+            </div>
+          </div>
+          <!-- Report new issue btn -->
+          <div style="margin:0 10px 8px; background:#2D7A5F;border-radius:10px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:14px;">📝</span>
+              <div>
+                <div style="font-size:10px;font-weight:700;color:white;">Report New Issue</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.7);">Take a photo &amp; submit</div>
+              </div>
+            </div>
+            <span style="color:white;font-size:12px;">›</span>
+          </div>
+          <!-- Recent Reports -->
+          <div style="padding:0 10px 4px; display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:9px;font-weight:700;color:#141c18;">Recent Reports</div>
+            <div style="font-size:8px;color:#2D7A5F;font-weight:600;">See All</div>
+          </div>
+          <div style="padding:0 10px; display:flex; flex-direction:column; gap:5px;">
+            <div style="background:white;border-radius:8px;padding:7px 8px;display:flex;align-items:center;gap:7px;">
+              <div style="width:26px;height:26px;border-radius:7px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">💡</div>
+              <div style="flex:1;">
+                <div style="font-size:9px;font-weight:700;color:#141c18;">Street Lighting</div>
+                <div style="font-size:7px;color:#888;">24/04/2026</div>
+              </div>
+              <span style="font-size:7px;background:#e8f5e9;color:#2D7A5F;padding:2px 5px;border-radius:4px;font-weight:600;">Resolved</span>
+            </div>
+            <div style="background:white;border-radius:8px;padding:7px 8px;display:flex;align-items:center;gap:7px;">
+              <div style="width:26px;height:26px;border-radius:7px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">🚗</div>
+              <div style="flex:1;">
+                <div style="font-size:9px;font-weight:700;color:#141c18;">Road &amp; Sidewalk</div>
+                <div style="font-size:7px;color:#888;">04/03/2026</div>
+              </div>
+              <span style="font-size:7px;background:#e8f5e9;color:#2D7A5F;padding:2px 5px;border-radius:4px;font-weight:600;">Resolved</span>
+            </div>
+          </div>
+          <!-- Bottom nav -->
+          <div style="margin-top:auto;background:white;border-top:1px solid #eee;padding:6px 0;display:flex;justify-content:space-around;position:absolute;bottom:0;left:0;right:0;border-radius:0 0 28px 28px;">
+            <div style="text-align:center;"><div style="font-size:14px;">🏠</div><div style="font-size:7px;font-weight:700;color:#2D7A5F;">Home</div></div>
+            <div style="text-align:center;"><div style="font-size:14px;">📋</div><div style="font-size:7px;color:#888;">My Reports</div></div>
+            <div style="text-align:center;"><div style="font-size:14px;">👤</div><div style="font-size:7px;color:#888;">Profile</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-num">500+</span>
+    <div class="stat-label">Reports submitted</div>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">48h</span>
+    <div class="stat-label">Avg. resolution time</div>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">4</span>
+    <div class="stat-label">Issue categories</div>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">100%</span>
+    <div class="stat-label">Free to use</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="fade-up">
+    <div class="section-tag">Features</div>
+    <h2 class="section-title">Everything you need to<br>fix campus problems</h2>
+    <p class="section-sub">From reporting to resolution — FixSpot handles the full workflow so nothing slips through the cracks.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feat-card fade-up">
+      <div class="feat-icon">📸</div>
+      <div class="feat-title">Photo Evidence</div>
+      <div class="feat-desc">Attach a photo directly from your camera or gallery. A picture is worth a thousand words — and faster fixes.</div>
+    </div>
+    <div class="feat-card fade-up">
+      <div class="feat-icon">📍</div>
+      <div class="feat-title">GPS Location</div>
+      <div class="feat-desc">Your exact coordinates are automatically attached to each report so maintenance knows exactly where to go.</div>
+    </div>
+    <div class="feat-card fade-up">
+      <div class="feat-icon">🔔</div>
+      <div class="feat-title">Notifications</div>
+      <div class="feat-desc">Get notified when your report status changes — from pending to in-progress to resolved. Always in the loop.</div>
+    </div>
+    <div class="feat-card fade-up">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Status Tracking</div>
+      <div class="feat-desc">Follow every stage of your report with a clear timeline: Pending → In Progress → Resolved.</div>
+    </div>
+    <div class="feat-card fade-up">
+      <div class="feat-icon">🛠️</div>
+      <div class="feat-title">Admin Dashboard</div>
+      <div class="feat-desc">Maintenance staff get a powerful dashboard to manage, prioritize, and close reports with completion photos.</div>
+    </div>
+    <div class="feat-card fade-up">
+      <div class="feat-icon">✏️</div>
+      <div class="feat-title">Edit & Delete</div>
+      <div class="feat-desc">Made a mistake? Pending reports can be edited or deleted before the team picks them up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="how-section">
+  <div class="fade-up" style="text-align: center;">
+    <div class="section-tag">How it works</div>
+    <h2 class="section-title">Fixed in 4 simple steps</h2>
+    <p class="section-sub" style="margin: 0 auto;">No paperwork, no waiting rooms, no phone calls. Just open FixSpot and report.</p>
+  </div>
+  <div class="steps-grid">
+    <div class="step-item fade-up">
+      <div class="step-num">1</div>
+      <div class="step-title">Sign Up</div>
+      <div class="step-desc">Create your account with your university email in under a minute.</div>
+    </div>
+    <div class="step-item fade-up">
+      <div class="step-num">2</div>
+      <div class="step-title">Spot an Issue</div>
+      <div class="step-desc">Find a broken light, leaking pipe, or any campus problem worth fixing.</div>
+    </div>
+    <div class="step-item fade-up">
+      <div class="step-num">3</div>
+      <div class="step-title">Submit a Report</div>
+      <div class="step-desc">Take a photo, let GPS pin the location, pick a category, and hit submit.</div>
+    </div>
+    <div class="step-item fade-up">
+      <div class="step-num">4</div>
+      <div class="step-title">Track & Done</div>
+      <div class="step-desc">Get notified as your issue moves from pending to resolved — with a completion photo.</div>
+    </div>
+  </div>
+</section>
+
+<!-- SCREENSHOTS -->
+<section id="screens" style="text-align: center; background: #f7faf8;">
+  <div class="fade-up">
+    <div class="section-tag">Screenshots</div>
+    <h2 class="section-title">See it in action</h2>
+    <p class="section-sub" style="margin: 0 auto;">A clean, intuitive interface designed for everyone on campus.</p>
+  </div>
+  <div class="screens-row">
+
+    <!-- Screen 1: Privacy Consent -->
+    <div class="screen-item fade-up">
+      <div class="screen-frame" style="width:185px;height:370px;">
+        <div style="width:100%;height:100%;border-radius:20px;overflow:hidden;background:#ebfdf6;display:flex;flex-direction:column;padding:14px 12px 12px;">
+          <div style="font-size:13px;font-weight:700;color:#141c18;margin-bottom:2px;">นโยบายความเป็นส่วนตัว</div>
+          <div style="font-size:8px;color:#6b7d74;margin-bottom:10px;">Privacy Policy &amp; Data Protection</div>
+          <div style="background:white;border-radius:10px;padding:10px;flex:1;overflow:hidden;">
+            <div style="font-size:9px;font-weight:700;color:#2D7A5F;margin-bottom:6px;">การจัดเก็บและใช้งานข้อมูล (PDPA)</div>
+            <div style="font-size:7.5px;color:#444;line-height:1.5;margin-bottom:8px;">แอปพลิเคชัน FixSpot มีความจำเป็นต้องขออนุญาตจัดเก็บและใช้งานข้อมูลของท่านเพื่อประสิทธิภาพในการแจ้งซ่อม ดังนี้:</div>
+            <div style="display:flex;gap:5px;margin-bottom:6px;align-items:flex-start;"><span style="font-size:11px;">📍</span><div><div style="font-size:8px;font-weight:700;color:#141c18;">ข้อมูลตำแหน่ง</div><div style="font-size:7px;color:#6b7d74;">ใช้ระบุพิกัดของปัญหาที่ท่านแจ้ง</div></div></div>
+            <div style="display:flex;gap:5px;margin-bottom:6px;align-items:flex-start;"><span style="font-size:11px;">📸</span><div><div style="font-size:8px;font-weight:700;color:#141c18;">รูปภาพ</div><div style="font-size:7px;color:#6b7d74;">ใช้เพื่อวิเคราะห์และเป็นหลักฐาน</div></div></div>
+            <div style="display:flex;gap:5px;margin-bottom:6px;align-items:flex-start;"><span style="font-size:11px;">⏳</span><div><div style="font-size:8px;font-weight:700;color:#141c18;">ระยะเวลาการจัดเก็บข้อมูล</div><div style="font-size:7px;color:#6b7d74;">จัดเก็บไว้เป็นเวลา 90 วัน</div></div></div>
+            <div style="display:flex;gap:5px;align-items:flex-start;"><span style="font-size:11px;">👤</span><div><div style="font-size:8px;font-weight:700;color:#141c18;">ข้อมูลโปรไฟล์</div><div style="font-size:7px;color:#6b7d74;">ชื่อและอีเมลใช้เพื่อยืนยันตัวตน</div></div></div>
+          </div>
+          <div style="font-size:7px;color:#6b7d74;margin:6px 0;text-align:center;">* การกด "ยอมรับ" หมายถึงท่านยินยอมให้แอปเข้าถึงข้อมูลตามระบุไว้ข้างต้น</div>
+          <div style="background:#2D7A5F;border-radius:20px;padding:7px;text-align:center;font-size:9px;font-weight:700;color:white;">ยอมรับและดำเนินการต่อ</div>
+        </div>
+      </div>
+      <div class="screen-label">Privacy Consent</div>
+    </div>
+
+    <!-- Screen 2: Home (CENTER - real app) -->
+    <div class="screen-item fade-up">
+      <div class="screen-frame center" style="width:185px;height:390px;">
+        <div style="width:100%;height:100%;border-radius:20px;overflow:hidden;background:#f0f4f2;display:flex;flex-direction:column;position:relative;">
+          <div style="background:white;padding:12px 12px 8px;display:flex;justify-content:space-between;align-items:flex-start;">
+            <div><div style="font-size:9px;color:#888;">Hello 👋</div><div style="font-size:12px;font-weight:700;">Pupattararak</div></div>
+            <div style="position:relative;"><div style="width:26px;height:26px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:12px;">🔔</div><div style="position:absolute;top:-2px;right:-2px;width:11px;height:11px;border-radius:50%;background:#e53935;font-size:6px;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">2</div></div>
+          </div>
+          <div style="background:white;padding:6px 10px 8px;margin-bottom:5px;">
+            <div style="font-size:8px;font-weight:700;margin-bottom:5px;">Report Status</div>
+            <div style="display:flex;gap:4px;">
+              <div style="flex:1;background:#fff3e0;border-radius:7px;padding:5px;text-align:center;"><div style="font-size:13px;font-weight:700;color:#e65100;">0</div><div style="font-size:6.5px;color:#888;">Pending</div></div>
+              <div style="flex:1;background:#e8eaf6;border-radius:7px;padding:5px;text-align:center;"><div style="font-size:13px;font-weight:700;color:#3949ab;">0</div><div style="font-size:6.5px;color:#888;">In Progress</div></div>
+              <div style="flex:1;background:#e8f5e9;border-radius:7px;padding:5px;text-align:center;"><div style="font-size:13px;font-weight:700;color:#2D7A5F;">6</div><div style="font-size:6.5px;color:#888;">Resolved</div></div>
+            </div>
+          </div>
+          <div style="margin:0 8px 6px;background:#2D7A5F;border-radius:9px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:12px;">📝</span><div><div style="font-size:9px;font-weight:700;color:white;">Report New Issue</div><div style="font-size:7px;color:rgba(255,255,255,0.7);">Take a photo &amp; submit</div></div></div>
+            <span style="color:white;font-size:11px;">›</span>
+          </div>
+          <div style="padding:0 10px 4px;display:flex;justify-content:space-between;"><div style="font-size:8px;font-weight:700;">Recent Reports</div><div style="font-size:7px;color:#2D7A5F;font-weight:600;">See All</div></div>
+          <div style="padding:0 8px;display:flex;flex-direction:column;gap:4px;">
+            <div style="background:white;border-radius:7px;padding:6px;display:flex;align-items:center;gap:6px;"><div style="width:24px;height:24px;border-radius:6px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:11px;">💡</div><div style="flex:1;"><div style="font-size:8px;font-weight:700;">Street Lighting</div><div style="font-size:6.5px;color:#888;">24/04/2026</div></div><span style="font-size:6.5px;background:#e8f5e9;color:#2D7A5F;padding:2px 4px;border-radius:3px;font-weight:600;">Resolved</span></div>
+            <div style="background:white;border-radius:7px;padding:6px;display:flex;align-items:center;gap:6px;"><div style="width:24px;height:24px;border-radius:6px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:11px;">🛣️</div><div style="flex:1;"><div style="font-size:8px;font-weight:700;">Road &amp; Sidewalk</div><div style="font-size:6.5px;color:#888;">04/03/2026</div></div><span style="font-size:6.5px;background:#e8f5e9;color:#2D7A5F;padding:2px 4px;border-radius:3px;font-weight:600;">Resolved</span></div>
+            <div style="background:white;border-radius:7px;padding:6px;display:flex;align-items:center;gap:6px;"><div style="width:24px;height:24px;border-radius:6px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:11px;">🚰</div><div style="flex:1;"><div style="font-size:8px;font-weight:700;">Water System</div><div style="font-size:6.5px;color:#888;">28/02/2026</div></div><span style="font-size:6.5px;background:#e8f5e9;color:#2D7A5F;padding:2px 4px;border-radius:3px;font-weight:600;">Resolved</span></div>
+          </div>
+          <div style="margin-top:auto;background:white;border-top:1px solid #eee;padding:5px 0;display:flex;justify-content:space-around;">
+            <div style="text-align:center;"><div style="font-size:13px;">🏠</div><div style="font-size:6.5px;font-weight:700;color:#2D7A5F;">Home</div></div>
+            <div style="text-align:center;"><div style="font-size:13px;">📋</div><div style="font-size:6.5px;color:#888;">My Reports</div></div>
+            <div style="text-align:center;"><div style="font-size:13px;">👤</div><div style="font-size:6.5px;color:#888;">Profile</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Home Screen</div>
+    </div>
+
+    <!-- Screen 3: Report Issue -->
+    <div class="screen-item fade-up">
+      <div class="screen-frame" style="width:185px;height:370px;">
+        <div style="width:100%;height:100%;border-radius:20px;overflow:hidden;background:#f0f4f2;display:flex;flex-direction:column;">
+          <div style="background:white;padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #eee;">
+            <div style="width:18px;height:18px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:9px;">‹</div>
+            <div style="font-size:11px;font-weight:700;flex:1;text-align:center;">Report Issue</div>
+          </div>
+          <div style="flex:1;overflow:hidden;padding:8px 10px;display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:8px;font-weight:700;">Photo of Issue <span style="color:#e53935;">*</span></div>
+            <div style="display:flex;gap:5px;">
+              <div style="flex:1;border:1.5px dashed #ccc;border-radius:8px;padding:8px;text-align:center;"><div style="font-size:14px;">📷</div><div style="font-size:7px;color:#888;">Take Photo</div></div>
+              <div style="flex:1;border:1.5px dashed #ccc;border-radius:8px;padding:8px;text-align:center;"><div style="font-size:14px;">🖼️</div><div style="font-size:7px;color:#888;">Gallery</div></div>
+            </div>
+            <div style="font-size:8px;font-weight:700;">Category <span style="color:#e53935;">*</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:3px;">
+              <div style="background:white;border-radius:12px;padding:3px 6px;font-size:7px;display:flex;align-items:center;gap:2px;border:1px solid #eee;">💡 Street Lighting</div>
+              <div style="background:white;border-radius:12px;padding:3px 6px;font-size:7px;display:flex;align-items:center;gap:2px;border:1px solid #eee;">🛣️ Road &amp; Sidewalk</div>
+              <div style="background:white;border-radius:12px;padding:3px 6px;font-size:7px;display:flex;align-items:center;gap:2px;border:1px solid #eee;">🚰 Water System</div>
+              <div style="background:white;border-radius:12px;padding:3px 6px;font-size:7px;display:flex;align-items:center;gap:2px;border:1px solid #eee;">🗑️ Waste</div>
+              <div style="background:white;border-radius:12px;padding:3px 6px;font-size:7px;display:flex;align-items:center;gap:2px;border:1px solid #eee;">🚦 Traffic</div>
+              <div style="background:white;border-radius:12px;padding:3px 6px;font-size:7px;display:flex;align-items:center;gap:2px;border:1px solid #eee;">🌳 Public</div>
+              <div style="background:white;border-radius:12px;padding:3px 6px;font-size:7px;display:flex;align-items:center;gap:2px;border:1px solid #eee;">❓ Other</div>
+            </div>
+            <div style="font-size:8px;font-weight:700;">Description <span style="color:#e53935;">*</span></div>
+            <div style="background:white;border-radius:8px;padding:6px;font-size:7px;color:#bbb;min-height:32px;border:1px solid #eee;">Briefly describe the issue...</div>
+            <div style="font-size:8px;font-weight:700;">Location <span style="color:#e53935;">*</span></div>
+            <div style="background:white;border-radius:8px;padding:6px;font-size:7px;color:#2D7A5F;display:flex;align-items:center;gap:4px;border:1px solid #eee;">📍 <span style="font-weight:600;">Location detected</span><span style="color:#888;"> 20.0498, 99.8751</span></div>
+          </div>
+          <div style="padding:0 10px 10px;">
+            <div style="background:#2D7A5F;border-radius:20px;padding:8px;text-align:center;font-size:9px;font-weight:700;color:white;">📤 Submit Report</div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Report Issue</div>
+    </div>
+
+    <!-- Screen 4: My Reports -->
+    <div class="screen-item fade-up">
+      <div class="screen-frame" style="width:185px;height:370px;">
+        <div style="width:100%;height:100%;border-radius:20px;overflow:hidden;background:#f0f4f2;display:flex;flex-direction:column;">
+          <div style="background:white;padding:10px 12px 8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;">
+            <div style="font-size:12px;font-weight:700;">My Reports</div>
+            <div style="font-size:8px;color:#888;">6 reports</div>
+          </div>
+          <div style="padding:6px 10px;display:flex;gap:4px;flex-wrap:wrap;background:white;border-bottom:1px solid #eee;">
+            <div style="background:#2D7A5F;color:white;border-radius:12px;padding:2px 8px;font-size:7px;font-weight:700;">All</div>
+            <div style="background:white;border:1px solid #ddd;border-radius:12px;padding:2px 7px;font-size:7px;color:#555;">Pending</div>
+            <div style="background:white;border:1px solid #ddd;border-radius:12px;padding:2px 7px;font-size:7px;color:#555;">In Progress</div>
+            <div style="background:white;border:1px solid #ddd;border-radius:12px;padding:2px 7px;font-size:7px;color:#555;">Resolved</div>
+            <div style="background:white;border:1px solid #ddd;border-radius:12px;padding:2px 7px;font-size:7px;color:#555;">Rejected</div>
+          </div>
+          <div style="flex:1;overflow:hidden;padding:6px 8px;display:flex;flex-direction:column;gap:4px;">
+            <div style="background:white;border-radius:8px;padding:6px;display:flex;align-items:center;gap:6px;"><div style="width:24px;height:24px;border-radius:6px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:11px;">💡</div><div style="flex:1;"><div style="font-size:8px;font-weight:700;">Street Lighting</div><div style="font-size:6.5px;color:#888;">พัง · 24/04/2026</div></div><span style="font-size:6px;background:#e8f5e9;color:#2D7A5F;padding:1px 4px;border-radius:3px;font-weight:600;">Resolved</span></div>
+            <div style="background:white;border-radius:8px;padding:6px;display:flex;align-items:center;gap:6px;"><div style="width:24px;height:24px;border-radius:6px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:11px;">🛣️</div><div style="flex:1;"><div style="font-size:8px;font-weight:700;">Road &amp; Sidewalk</div><div style="font-size:6.5px;color:#888;">ถนนพัง · 04/03/2026</div></div><span style="font-size:6px;background:#e8f5e9;color:#2D7A5F;padding:1px 4px;border-radius:3px;font-weight:600;">Resolved</span></div>
+            <div style="background:white;border-radius:8px;padding:6px;display:flex;align-items:center;gap:6px;"><div style="width:24px;height:24px;border-radius:6px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:11px;">🚦</div><div style="flex:1;"><div style="font-size:8px;font-weight:700;">Traffic &amp; Safety</div><div style="font-size:6.5px;color:#888;">28/02/2026</div></div><span style="font-size:6px;background:#e8f5e9;color:#2D7A5F;padding:1px 4px;border-radius:3px;font-weight:600;">Resolved</span></div>
+            <div style="background:white;border-radius:8px;padding:6px;display:flex;align-items:center;gap:6px;"><div style="width:24px;height:24px;border-radius:6px;background:#ebfdf6;display:flex;align-items:center;justify-content:center;font-size:11px;">🚰</div><div style="flex:1;"><div style="font-size:8px;font-weight:700;">Water System</div><div style="font-size:6.5px;color:#888;">28/02/2026</div></div><span style="font-size:6px;background:#e8f5e9;color:#2D7A5F;padding:1px 4px;border-radius:3px;font-weight:600;">Resolved</span></div>
+          </div>
+          <div style="background:white;border-top:1px solid #eee;padding:5px 0;display:flex;justify-content:space-around;">
+            <div style="text-align:center;"><div style="font-size:13px;">🏠</div><div style="font-size:6.5px;color:#888;">Home</div></div>
+            <div style="text-align:center;"><div style="font-size:13px;">📋</div><div style="font-size:6.5px;font-weight:700;color:#2D7A5F;">My Reports</div></div>
+            <div style="text-align:center;"><div style="font-size:13px;">👤</div><div style="font-size:6.5px;color:#888;">Profile</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">My Reports</div>
+    </div>
+
+    <!-- Screen 5: Profile -->
+    <div class="screen-item fade-up">
+      <div class="screen-frame" style="width:185px;height:370px;">
+        <div style="width:100%;height:100%;border-radius:20px;overflow:hidden;background:#f0f4f2;display:flex;flex-direction:column;">
+          <div style="background:white;padding:10px 12px;border-bottom:1px solid #eee;"><div style="font-size:12px;font-weight:700;">Profile</div></div>
+          <div style="flex:1;padding:10px 10px;display:flex;flex-direction:column;gap:8px;">
+            <div style="background:white;border-radius:12px;padding:14px 12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:#2D7A5F;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:white;">P</div>
+              <div style="font-size:11px;font-weight:700;">Pupattararak ✏️</div>
+              <div style="font-size:7.5px;color:#888;">6731503115@lamduan.mfu.ac.th</div>
+              <div style="background:#ebfdf6;border-radius:12px;padding:2px 10px;display:flex;align-items:center;gap:4px;"><span style="font-size:9px;">👤</span><span style="font-size:7.5px;color:#2D7A5F;font-weight:600;">User</span></div>
+            </div>
+            <div style="background:white;border-radius:12px;overflow:hidden;">
+              <div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f0f0;">
+                <div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;">📋</span><span style="font-size:9px;font-weight:500;">My Reports</span></div>
+                <span style="font-size:10px;color:#aaa;">›</span>
+              </div>
+              <div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;">📝</span><span style="font-size:9px;font-weight:500;">Report New Issue</span></div>
+                <span style="font-size:10px;color:#aaa;">›</span>
+              </div>
+            </div>
+            <div style="background:white;border-radius:12px;padding:9px 12px;text-align:center;"><div style="font-size:9px;font-weight:600;color:#e53935;">Sign Out</div></div>
+            <div style="font-size:7px;color:#aaa;text-align:center;">Mae Fah Luang University · Facilities Management</div>
+          </div>
+          <div style="background:white;border-top:1px solid #eee;padding:5px 0;display:flex;justify-content:space-around;">
+            <div style="text-align:center;"><div style="font-size:13px;">🏠</div><div style="font-size:6.5px;color:#888;">Home</div></div>
+            <div style="text-align:center;"><div style="font-size:13px;">📋</div><div style="font-size:6.5px;color:#888;">My Reports</div></div>
+            <div style="text-align:center;"><div style="font-size:13px;">👤</div><div style="font-size:6.5px;font-weight:700;color:#2D7A5F;">Profile</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Profile</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- DOWNLOAD -->
+<section id="download" class="download-section">
+  <div class="fade-up">
+    <div class="section-title">Ready to fix your campus?</div>
+    <p class="section-sub">Download FixSpot and start making Mae Fah Luang University a better place — one report at a time.</p>
+  </div>
+  <div class="download-btns fade-up">
+    <div class="coming-soon">
+      🤖 Android APK — Coming Soon
+    </div>
+    <a href="https://fixspot-14b8b.web.app" target="_blank" class="dl-btn">
+      <div class="dl-icon">🌐</div>
+      <div class="dl-text">
+        <small>Try it on</small>
+        <span>Web Browser</span>
+      </div>
+    </a>
+  </div>
+  <p style="color:rgba(255,255,255,0.5); font-size:0.82rem; margin-top:2rem;">Currently available as web app · Mobile APK coming soon</p>
+</section>
+
+<!-- PRIVACY -->
+<section id="privacy" class="privacy-section">
+  <div class="fade-up">
+    <div class="section-tag">Privacy Policy</div>
+    <h2 class="section-title">Your data,<br>your rights.</h2>
+    <p class="section-sub">FixSpot is committed to protecting your personal data in accordance with Thailand's Personal Data Protection Act (PDPA).</p>
+  </div>
+
+  <div class="privacy-grid">
+    <div>
+      <div class="privacy-block fade-up">
+        <h3>Data We Collect</h3>
+        <p>We only collect what is strictly necessary to operate the service.</p>
+        <ul class="privacy-list">
+          <li><strong>Email address</strong> — for account authentication only. Never shared publicly.</li>
+          <li><strong>Full name</strong> — displayed on your reports to identify the submitter.</li>
+          <li><strong>GPS location</strong> — recorded only at the moment you submit a report. We do not track your location continuously.</li>
+          <li><strong>Photos</strong> — uploaded images are stored securely on Cloudinary servers for the purpose of documenting issues.</li>
+        </ul>
+      </div>
+
+      <div class="privacy-block fade-up" style="margin-top: 2rem;">
+        <h3>Third-Party Services</h3>
+        <ul class="privacy-list">
+          <li><strong>Firebase (Google)</strong> — handles authentication and database storage.</li>
+          <li><strong>Cloudinary</strong> — stores report images. Images are linked to your report only.</li>
+        </ul>
+      </div>
+
+      <div class="privacy-block fade-up" style="margin-top: 2rem;">
+        <h3>Data Retention</h3>
+        <p>Your data is retained for as long as your account is active. Resolved reports are kept for audit purposes for a maximum of 1 year, then deleted. You may request early deletion at any time.</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="fade-up">
+        <h3 style="font-size:1.1rem; font-weight:600; margin-bottom:1rem; color:var(--green-dark)">Your Rights under PDPA</h3>
+        <div class="rights-grid">
+          <div class="right-card">
+            <h4>Right to Access</h4>
+            <p>Request a copy of all personal data we hold about you.</p>
+          </div>
+          <div class="right-card">
+            <h4>Right to Erasure</h4>
+            <p>Delete your account and all associated data at any time from your profile settings.</p>
+          </div>
+          <div class="right-card">
+            <h4>Right to Rectification</h4>
+            <p>Update your name or contact information from within the app.</p>
+          </div>
+          <div class="right-card">
+            <h4>Right to Withdraw Consent</h4>
+            <p>Stop using the service and request data removal by contacting us.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="privacy-block fade-up" style="margin-top: 2rem;">
+        <h3>Security Measures</h3>
+        <ul class="privacy-list">
+          <li>All data transmitted over HTTPS (TLS encryption)</li>
+          <li>Firebase Security Rules enforce role-based access control</li>
+          <li>Passwords are never stored — managed by Firebase Authentication</li>
+          <li>Admin access is strictly controlled and audited</li>
+        </ul>
+      </div>
+
+      <div class="fade-up" style="margin-top:2rem; background:var(--green-pale); border-radius:var(--radius); padding:1.5rem; border:1px solid var(--green-muted);">
+        <p style="font-size:0.85rem; color:var(--ink-mid); line-height:1.7; margin:0;">
+          <strong style="color:var(--green-dark)">Last updated:</strong> January 2025<br>
+          For any privacy-related questions or to exercise your rights, please contact us at the email below. We will respond within 30 days.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="contact-section">
+  <div class="contact-inner">
+    <div class="section-tag" style="background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.8); border-color:rgba(255,255,255,0.2)">Contact & About</div>
+    <h2 class="section-title fade-up">Get in touch</h2>
+    <p class="section-sub fade-up">Have questions, feedback, or a bug to report? We'd love to hear from you.</p>
+    <div class="contact-grid fade-up">
+      <div class="contact-card">
+        <div class="contact-icon">👨‍💻</div>
+        <h4>Developer</h4>
+        <p>Pupattararak Masomjit<br>Mae Fah Luang University<br>1305216 Mobile Application Development</p>
+      </div>
+      <div class="contact-card">
+        <div class="contact-icon">📧</div>
+        <h4>Email</h4>
+        <p><a href="mailto:6731503115@lamduan.mfu.ac.th">6731503115@lamduan.mfu.ac.th</a><br><br>We reply within 2 business days</p>
+      </div>
+      <div class="contact-card">
+        <div class="contact-icon">🐙</div>
+        <h4>Source Code</h4>
+        <p><a href="https://github.com/Puputtararak-06/Fixspot" target="_blank">github.com/Puputtararak-06/<br>Fixspot</a></p>
+      </div>
+    </div>
+    <div class="fade-up" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius); padding:2rem;">
+      <p style="color:rgba(255,255,255,0.6); font-size:0.9rem; line-height:1.7; margin:0;">
+        FixSpot is a student project developed as part of the 1305216 Mobile Application Development course at Mae Fah Luang University (มหาวิทยาลัยแม่ฟ้าหลวง). It is not an official university system. All data submitted is used solely for the purpose of this educational project.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>© 2025 FixSpot · Mae Fah Luang University</span>
+  <div class="footer-links">
+    <a href="#privacy">Privacy Policy</a>
+    <a href="#contact">Contact</a>
+    <a href="https://github.com/Puputtararak-06/Fixspot" target="_blank">GitHub</a>
+  </div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 80);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
