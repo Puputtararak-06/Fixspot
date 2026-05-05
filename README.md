@@ -1,15 +1,27 @@
-# FixSpot 🔧
+# FixSpot 
 ### Infrastructure Issue Reporting System
 > Mae Fah Luang University — Facilities Management
 
 ---
 
-## 📱 About
+##  Links
+
+| | Link |
+|---|---|
+|  Landing Page | https://fixspot-14b8b.web.app |
+|  Web App | https://fixspot-app.web.app |
+|  Google Play Store | https://play.google.com/store/apps/details?id=com.pupattararak.fixspot&hl=th |
+
+>  Or search **"FixSpot"** on Google Play Store
+
+---
+
+##  About
 FixSpot is a mobile application that allows students and staff at Mae Fah Luang University to report infrastructure problems such as broken street lights, damaged roads, water system issues, and more. Admins can manage and resolve reports directly through the app.
 
 ---
 
-## 🚀 Tech Stack
+##  Tech Stack
 
 | Technology | Usage |
 |---|---|
@@ -24,9 +36,9 @@ FixSpot is a mobile application that allows students and staff at Mae Fah Luang 
 
 ---
 
-## ✨ Features
+##  Features
 
-### 👤 User
+###  User
 - Register / Login / Forgot Password
 - Report New Issue (Photo + GPS + Category + Description)
 - Edit Report (Pending status only)
@@ -36,7 +48,7 @@ FixSpot is a mobile application that allows students and staff at Mae Fah Luang 
 - In-app Notifications (Bell icon + Unread badge)
 - Profile (Edit name / Sign out)
 
-### 🛡️ Admin
+###  Admin
 - Dashboard (Report counts by status + Total users)
 - Manage Reports (Search + Filter)
 - Report Moderation
@@ -47,50 +59,13 @@ FixSpot is a mobile application that allows students and staff at Mae Fah Luang 
 
 ---
 
-## 📊 Status Flow
+##  Status Flow
 pending → in_progress → resolved
 pending → rejected
 
-## 📁 Project Structure
-src/
-├── context/
-│   └── AppContext.jsx
-├── navigation/
-│   ├── AppNavigator.jsx
-│   ├── UserTabs.jsx
-│   └── AdminTabs.jsx
-├── features/
-│   ├── auth/
-│   │   ├── LoginScreen.jsx
-│   │   └── RegisterScreen.jsx
-│   ├── home/
-│   │   └── HomeScreen.jsx
-│   ├── report/
-│   │   ├── CreateReportScreen.jsx
-│   │   └── EditReportScreen.jsx
-│   ├── reportDetail/
-│   │   └── ReportDetailScreen.jsx
-│   ├── myReports/
-│   │   └── MyReportsScreen.jsx
-│   ├── profile/
-│   │   └── ProfileScreen.jsx
-│   └── admin/
-│       ├── dashboard/
-│       │   └── AdminDashboardScreen.jsx
-│       ├── manageReports/
-│       │   └── ManageReportsScreen.jsx
-│       ├── reportModeration/
-│       │   └── ReportModerationScreen.jsx
-│       └── userManagement/
-│           └── UserManagementScreen.jsx
-└── services/
-├── firebase.js
-├── authService.js
-└── cloudinaryService.js
-
 ---
 
-## ⚙️ Setup & Installation
+## Setup & Installation
 
 ### Prerequisites
 - Node.js 18+
@@ -109,47 +84,7 @@ cd Fixspot
 npm install
 ```
 
-### 3. Configure Firebase
-Create `src/services/firebase.js`
-```js
-import { initializeApp } from 'firebase/app'
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-}
-
-const app = initializeApp(firebaseConfig)
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-})
-export const db = getFirestore(app)
-```
-
-### 4. Configure Cloudinary
-Create `src/services/cloudinaryService.js`
-```js
-const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload'
-const UPLOAD_PRESET = 'YOUR_UPLOAD_PRESET'
-
-export const uploadImage = async (uri) => {
-  const formData = new FormData()
-  formData.append('file', { uri, type: 'image/jpeg', name: 'upload.jpg' })
-  formData.append('upload_preset', UPLOAD_PRESET)
-  const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData })
-  const data = await res.json()
-  return data.secure_url
-}
-```
-
-### 5. Run the app
+### 3. Run the app
 ```bash
 npx expo start -c
 ```
@@ -157,36 +92,14 @@ Scan QR code with Expo Go app
 
 ---
 
-## 👑 Set Admin Account
-Admin role must be set manually via Firebase Console
-Firebase Console
-→ Firestore Database
-→ users collection
-→ find your user document
-→ change role: "user" → "admin"
+##  Admin Account
+Contact developer to request admin access
 
----
+Developer: Pupattararak Masomjit
+Email: 6731503115@lamduan.mfu.ac.th
 
-## 🌐 Web Deploy
 
-```bash
-npx expo export --platform web
-firebase deploy
-```
-
-Live at: https://fixspot-14b8b.web.app
-
----
-
-## 📦 Build Android (.aab)
-
-```bash
-eas build --platform android
-```
-
----
-
-## 👨‍💻 Developer
+## Developer
 
 | Info | Detail |
 |---|---|
